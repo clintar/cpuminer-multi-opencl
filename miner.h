@@ -3,6 +3,8 @@
 
 #include "cpuminer-config.h"
 
+#include "gpu.h"
+
 #include <stdbool.h>
 #include <inttypes.h>
 #include <sys/time.h>
@@ -209,12 +211,17 @@ struct thr_info {
     int		id;
     pthread_t	pth;
     struct thread_q	*q;
+	GPU*		gpu;
+	uint32_t shares_accepted;
+	uint32_t shares_rejected;
 };
 
 struct work_restart {
     volatile unsigned long	restart;
     char			padding[128 - sizeof(unsigned long)];
 };
+
+extern int opt_work_size;
 
 extern bool opt_debug;
 extern bool opt_protocol;

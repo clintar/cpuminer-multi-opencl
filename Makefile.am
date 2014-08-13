@@ -1,3 +1,4 @@
+OPENCL_INCLUDES= -I"$(AMDAPPSDKROOT)//include"
 
 if WANT_JANSSON
 JANSSON_INCLUDES= -I$(top_srcdir)/compat/jansson
@@ -9,7 +10,7 @@ EXTRA_DIST	= example-cfg.json nomacro.pl
 
 SUBDIRS		= compat
 
-INCLUDES	= $(PTHREAD_FLAGS) -fno-strict-aliasing $(JANSSON_INCLUDES)
+INCLUDES	= $(PTHREAD_FLAGS) -fno-strict-aliasing $(JANSSON_INCLUDES) $(OPENCL_INCLUDES) 
 
 bin_PROGRAMS	= minerd
 
@@ -23,7 +24,7 @@ minerd_SOURCES	= elist.h \
 		  wildkeccak.c
 
 minerd_LDFLAGS	= $(PTHREAD_FLAGS) 
-minerd_LDADD	= @LIBCURL@ @JANSSON_LIBS@ @PTHREAD_LIBS@ @WS2_LIBS@
+minerd_LDADD	= @LIBCURL@ @JANSSON_LIBS@ @PTHREAD_LIBS@ @WS2_LIBS@ -lOpenCL
 minerd_CPPFLAGS = @LIBCURL_CPPFLAGS@
 minerd_CFLAGS   = -std=gnu11 -O3 -march=native -fPIC -flto
 

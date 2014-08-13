@@ -104,32 +104,19 @@ struct workio_cmd {
 };
 
 enum mining_algo {
-    ALGO_SCRYPT,      /* scrypt(1024,1,1) */
-    ALGO_SHA256D,     /* SHA-256d */
-    ALGO_KECCAK,      /* Keccak */
-    ALGO_HEAVY,       /* Heavy */
-    ALGO_QUARK,       /* Quark */
-    ALGO_SKEIN,       /* Skein */
-    ALGO_SHAVITE3,    /* Shavite3 */
-    ALGO_BLAKE,       /* Blake */
-    ALGO_X11,         /* X11 */
     ALGO_WILD_KECCAK, /* Boolberry */
-    ALGO_CRYPTONIGHT, /* CryptoNight */    
+    ALGO_WILD_KECCAK_OCL, /* Boolberry */
+    ALGO_WILD_KECCAK_OCL_MULTISTEP
 };
 
 static const char *algo_names[] = {
-    [ALGO_SCRYPT] =      "scrypt",
-    [ALGO_SHA256D] =     "sha256d",
-    [ALGO_KECCAK] =      "keccak",
-    [ALGO_HEAVY] =       "heavy",
-    [ALGO_QUARK] =       "quark",
-    [ALGO_SKEIN] =       "skein",
-    [ALGO_SHAVITE3] =    "shavite3",
-    [ALGO_BLAKE] =       "blake",
-    [ALGO_X11] =         "x11",
     [ALGO_WILD_KECCAK] = "wildkeccak",
-    [ALGO_CRYPTONIGHT] = "cryptonight",
+    [ALGO_WILD_KECCAK_OCL] = "wildkeccak_ocl",
+    [ALGO_WILD_KECCAK_OCL_MULTISTEP] = "wildkeccak_ocl_multistep",
 };
+
+int opt_device = 0;
+int opt_work_size = (1 << 18);
 
 bool opt_debug = false;
 bool opt_protocol = false;
@@ -150,7 +137,7 @@ int opt_timeout = 0;
 static int opt_scantime = 5;
 static json_t *opt_config;
 static const bool opt_time = true;
-static const enum mining_algo opt_algo = ALGO_WILD_KECCAK;
+static enum mining_algo opt_algo = ALGO_WILD_KECCAK_OCL;
 static int opt_n_threads;
 static int num_processors;
 static char *rpc_url;
@@ -213,17 +200,11 @@ static char const usage[] =
     Usage: " PROGRAM_NAME " [OPTIONS]\n\
     Options:\n\
     -a, --algo=ALGO       specify the algorithm to use\n\
-    scrypt       scrypt(1024, 1, 1) (default)\n\
-    sha256d      SHA-256d\n\
-    keccak       Keccak\n\
-    quark        Quark\n\
-    heavy        Heavy\n\
-    skein        Skein\n\
-    shavite3     Shavite3\n\
-    blake        Blake\n\
-    x11          X11\n\
-    cryptonight  CryptoNight\n\
-    wildkeccak   WildKeccak\n\
+    wildkeccak   WildKeccak CPU\n\
+    wildkeccak_ocl   WildKeccak OpenCL\n\
+    wildkeccak_ocl_multistep   WildKeccak OpenCL multistep\n\
+    -d  --device=N  start OpenCL device to use (default: 0) \n\
+    -i  --intensity=N  OpenCL work intensity (default: 18) \n\
     -k  --scratchpad=URL  URL of inital scratchpad file\n\
     -l  --scratchpad_local_cache=PATH  PATH to local scratchpad file\n\
     -o, --url=URL         URL of mining server\n\
@@ -267,7 +248,7 @@ static char const short_options[] =
 #ifdef HAVE_SYSLOG_H
     "S"
 #endif
-    "a:c:Dhp:Px:qr:R:s:t:T:o:u:O:V:k:l";
+    "i:d:a:c:Dhp:Px:qr:R:s:t:T:o:u:O:V:k:l:";
 
 static struct option const options[] = {
     { "algo", 1, NULL, 'a' },
@@ -300,6 +281,8 @@ static struct option const options[] = {
     { "user", 1, NULL, 'u' },
     { "userpass", 1, NULL, 'O' },
     { "version", 0, NULL, 'V' },
+    { "device", 1, NULL, 'd' },
+    { "intensity", 1, NULL, 'i' },
     { 0, 0, 0, 0 }
 };
 
@@ -477,6 +460,13 @@ void reset_scratchpad(void)
     //unlink(scratchpad_file);
 }
 
+void update_scratchpad(void)
+{
+	if (opt_algo == ALGO_WILD_KECCAK_OCL || opt_algo == ALGO_WILD_KECCAK_OCL_MULTISTEP) {
+		for (int i = 0; i < opt_n_threads; i++)
+			thr_info[i].gpu->update_scratchpad = true;
+	}
+}
 
 bool patch_scratchpad_with_addendum(uint64_t global_add_startpoint, uint64_t* padd_buff, size_t count/*uint64 units*/)
 {
@@ -507,6 +497,9 @@ bool apply_addendum(uint64_t* padd_buff, size_t count/*uint64 units*/)
         pscratchpad_buff[scratchpad_size+k] = padd_buff[k];
 
     scratchpad_size += count;
+
+    update_scratchpad();
+
     return true;
 }
 
@@ -525,6 +518,9 @@ bool pop_addendum(struct addendums_array_entry* padd_entry)
     memcpy(&current_scratchpad_hi, &padd_entry->prev_hi, sizeof(padd_entry->prev_hi));
 
     memset(padd_entry, 0, sizeof(struct addendums_array_entry));
+
+    update_scratchpad();
+
     return true;
 }
 
@@ -1395,7 +1391,7 @@ static void *miner_thread(void *userdata) {
 
     /* Cpu affinity only makes sense if the number of threads is a multiple
     * of the number of CPUs */
-    if (num_processors > 1 && opt_n_threads % num_processors == 0) {
+    if (opt_algo == ALGO_WILD_KECCAK && num_processors > 1 && opt_n_threads % num_processors == 0) {
         if (!opt_quiet) {
             applog(LOG_INFO, "Binding thread %d to cpu %d",
                    thr_id, thr_id % num_processors);
@@ -1461,6 +1457,8 @@ static void *miner_thread(void *userdata) {
         else
             max64 = g_work_time + (have_longpoll ? LP_SCANTIME : opt_scantime) - time(NULL );
         max64 *= thr_hashrates[thr_id];
+    	if ((opt_algo == ALGO_WILD_KECCAK_OCL || opt_algo == ALGO_WILD_KECCAK_OCL_MULTISTEP) && max64 < opt_work_size)
+            max64 = opt_work_size;
         if (max64 <= 0) {
                 max64 = 0x1fffffLL;
         }
@@ -1478,7 +1476,11 @@ static void *miner_thread(void *userdata) {
         gettimeofday(&tv_start, NULL );
 
         /* scan nonces for a proof-of-work hash */
-        rc = scanhash_wildkeccak(thr_id, work.data, work.target, max_nonce, &hashes_done);
+        uint64_t start_nonce = *nonceptr;
+        if (opt_algo == ALGO_WILD_KECCAK)
+        	rc = scanhash_wildkeccak(thr_id, work.data, work.target, max_nonce, &hashes_done);
+        else
+        	rc = scanhash_wildkeccak_gpu(thr_id, mythr->gpu, work.data, work.target, max_nonce, &hashes_done);
 
         /* record scanhash elapsed time */
         gettimeofday(&tv_end, NULL );
@@ -1506,6 +1508,9 @@ static void *miner_thread(void *userdata) {
         /* if nonce found, submit work */
         if (rc && !opt_benchmark && !submit_work(mythr, &work))
             break;
+
+    	if (opt_algo == ALGO_WILD_KECCAK_OCL || opt_algo == ALGO_WILD_KECCAK_OCL_MULTISTEP)
+    		*nonceptr = start_nonce + hashes_done - 1;
     }
 
 out: tq_freeze(mythr->q);
@@ -1724,7 +1729,7 @@ bool load_scratchpad_from_file(const char *fname)
 
     if ((fh.scratchpad_size*8 > (WILD_KECCAK_SCRATCHPAD_BUFFSIZE)) ||(fh.scratchpad_size%4)) 
     {
-        applog(LOG_ERR, "file %s size invalid (%" PRIu64 "), max=%zu",
+        applog(LOG_ERR, "file %s size invalid (%" PRIu64 "), max=%u",
             fname, fh.scratchpad_size*8, WILD_KECCAK_SCRATCHPAD_BUFFSIZE);
         fclose(fp);
         return false;
@@ -1740,10 +1745,11 @@ bool load_scratchpad_from_file(const char *fname)
     current_scratchpad_hi = fh.current_hi;
     memcpy(&add_arr[0], &fh.add_arr[0], sizeof(fh.add_arr));
 
-    applog(LOG_DEBUG, "loaded scratchpad %s (%zu bytes), height=%" PRIu64, fname, 
+    applog(LOG_DEBUG, "loaded scratchpad %s (%u bytes), height=%" PRIu64, fname,
            scratchpad_size*8, current_scratchpad_hi.height);
     fclose(fp);
     prev_save = time(NULL);
+
     return true;
 }
 
@@ -2041,9 +2047,28 @@ static void parse_arg(int key, char *arg) {
     int v;
 
     switch (key) {
-    case 'a':
-        applog(LOG_INFO, "Algorithm switch ignored - this miner supports Wild Keccak only.\n");
+    case 'd':
+        v = atoi(arg);
+        if (v < 0 || v >= MAX_GPU) /* sanity check */
+            show_usage_and_exit(1);
+        opt_device = v;
         break;
+    case 'i':
+        v = atoi(arg);
+        if (v < 10 || v > 30) /* sanity check */
+            show_usage_and_exit(1);
+        opt_work_size = (1 << v);
+        break;
+    case 'a':
+		for (v = 0; v < ARRAY_SIZE(algo_names); v++) {
+			if (algo_names[v] && !strcmp(arg, algo_names[v])) {
+				opt_algo = v;
+				break;
+			}
+		}
+		if (v == ARRAY_SIZE(algo_names))
+			show_usage_and_exit(1);
+		break;
     case 'k':
         pscratchpad_url = arg;
         break;
@@ -2480,7 +2505,10 @@ int main(int argc, char *argv[]) {
     if (num_processors < 1)
         num_processors = 1;
     if (!opt_n_threads)
-        opt_n_threads = num_processors;
+    	if (opt_algo == ALGO_WILD_KECCAK_OCL || opt_algo == ALGO_WILD_KECCAK_OCL_MULTISTEP)
+    		opt_n_threads = MAX_GPU;
+    	else
+    		opt_n_threads = num_processors;
 
 #ifdef HAVE_SYSLOG_H
     if (use_syslog)
@@ -2498,6 +2526,18 @@ int main(int argc, char *argv[]) {
     thr_hashrates = (double *) calloc(opt_n_threads, sizeof(double));
     if (!thr_hashrates)
         return 1;
+
+	if (opt_algo == ALGO_WILD_KECCAK_OCL || opt_algo == ALGO_WILD_KECCAK_OCL_MULTISTEP) {
+	    for (i = 0; i < opt_n_threads; i++) {
+	        thr = &thr_info[i];
+
+			thr->gpu = initGPU(i + opt_device, opt_algo == ALGO_WILD_KECCAK_OCL ? 0 : 1);
+			if (thr->gpu == NULL)
+				break;
+	    }
+
+    	opt_n_threads = i;
+	}
 
     /* init workio thread info */
     work_thr_id = opt_n_threads;
