@@ -1,9 +1,7 @@
-CPUMiner-Multi
+CPUMiner-Multi-OpenCL
 ==============
 
-[![Build Status](https://travis-ci.org/LucasJones/cpuminer-multi.svg?branch=master)](https://travis-ci.org/LucasJones/cpuminer-multi)
-
-This is a multi-threaded CPU miner,
+This is a multi-threaded OpenCL/CPU miner,
 fork of [pooler](//github.com/pooler)'s cpuminer.
 
 #### Table of contents
@@ -19,27 +17,7 @@ fork of [pooler](//github.com/pooler)'s cpuminer.
 
 Algorithms
 ==========
-#### Currently supported
- * ✓ __scrypt__ (Litecoin, Dogecoin, Feathercoin, etc..)
- * ✓ __sha256d__ (Bitcoin, Freicoin, Peercoin/PPCoin, Terracoin, etc..)
- * ✓ __x11__ (Darkcoin [DRK], Hirocoin, Limecoin)
- * ✓ __cryptonight__ (Bytecoin [BCN], Monero)
  * ✓ __wildkeccak__ (Boolberry [BBR])
-
-
-#### Implemented, but untested
- * ? keccak (Maxcoin  HelixCoin, CryptoMeth, Galleon, 365coin, Slothcoin, BitcointalkCoin)
- * ? hefty1 (Heavycoin)
- * ? quark (Quarkcoin)
- * ? skein (Skeincoin, Myriadcoin)
- * ? shavite3 (INKcoin)
- * ? blake (Blakecoin)
-
-#### Planned support for
- * *scrypt-n* (Vertcoin [VTC])
- * *scrypt-jane* (YaCoin, CopperBars, Pennies, Tickets, etc..)
- * *qubit* (Qubitcoin, Myriadcoin)
- * *groestl* (Groestlcoin)
 
 Dependencies
 ============
@@ -47,14 +25,10 @@ Dependencies
 * jansson			http://www.digip.org/jansson/ (jansson is included in-tree)
 * openssl           https://www.openssl.org/
 
-Download
-========
-* Binary releases: http://boolberry.com/downloads.html
-* Git tree:   https://github.com/cryptozoidberg/cpuminer-multi
-  * Clone with `git clone https://github.com/cryptozoidberg/cpuminer-multi`
-
 Build
 =====
+
+Important: edit 1st line of Makefile.am if you have OpenCL headers in different directory.
 
 #### Basic *nix build instructions:
 ```sh
@@ -109,8 +83,10 @@ make
 
 Usage instructions
 ==================
+
+Copy *.cl kernel files to executable's directory.
 ```sh
-./minerd -a wildkeccak -o stratum+tcp://url_to_server:7778 -u 1L1ZPC9XodC6g5BX8j8m3vcdkXPiZrVF7RcERWE879coQDWiztUbkkVZ86o43P27Udb3qxL4B41gbaGpvj3nS7DgFZauAZE  -p x -P -D -t 1 -k https://raw.githubusercontent.com/scratchpadbbr/scratchpad/master/scratchpad.bin --scratchpad_local_cache=/home/roky/cpuminer-multi/s.bin
+./minerd -a wildkeccak_ocl -o stratum+tcp://url_to_server:7778 -u 1L1ZPC9XodC6g5BX8j8m3vcdkXPiZrVF7RcERWE879coQDWiztUbkkVZ86o43P27Udb3qxL4B41gbaGpvj3nS7DgFZauAZE  -p x -t 1 -d 0 -i 20 -k https://raw.githubusercontent.com/scratchpadbbr/scratchpad/master/scratchpad.bin -l scratchpad.bin
 ```
 Run "minerd --help" to see options.
 
@@ -130,14 +106,13 @@ When the --proxy option is not used, the program honors the http_proxy and all_p
 
 Donations
 =========
-Donations for the work done in this fork by otila are accepted at
-* MRO: `46i538G1mrxAjzvP7cqKNufPoYAmmZyX5NidEcpmEjqgGB8F8vmRax3SuipJ3zkEkkFYQHjM58zDeXyoNgxVVGby4JMGwZt`
-* BBR: `@anonymous`
-* BTC: `1Gpa1DteQozR4Mw94mjZRGb6McaNT6nrTC`
+Donations for the work done in this fork by mbk are accepted at
+* BBR: `@mbk`
+* BTC: `1Lns6UjL3sw77DJ5z1EKJZy6SnqriqvVGK`
 
 Credits
 =======
-CPUMiner-multi was forked from Lucas Jones's cpuminer-multi, and has been developed by Cryptozoidberg.
+CPUMiner-Multi-OpenCL was forked from Cryptozoidberg's cpuminer-multi, and has been developed by Mikhail Kuperman (mbk.git@gmail.com).
 
 License
 =======
