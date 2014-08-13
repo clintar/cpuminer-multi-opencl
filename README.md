@@ -85,10 +85,31 @@ Usage instructions
 ==================
 
 Copy *.cl kernel files to executable's directory.
-```sh
-./minerd -a wildkeccak_ocl -o stratum+tcp://url_to_server:7778 -u 1L1ZPC9XodC6g5BX8j8m3vcdkXPiZrVF7RcERWE879coQDWiztUbkkVZ86o43P27Udb3qxL4B41gbaGpvj3nS7DgFZauAZE  -p x -t 1 -d 0 -i 20 -k https://raw.githubusercontent.com/scratchpadbbr/scratchpad/master/scratchpad.bin -l scratchpad.bin
+Always specify local scratchpad file (ex. -l scratchpad.bin)!
+
+To mine on all available GPUs:
 ```
-Run "minerd --help" to see options.
+minerd -a wildkeccak_ocl -o stratum+tcp://url_to_server:7777 -u 1EmWGnwhydr3S2vRWQbbefh1hgDKgMjdMGe43ZgdPhdARhNBRkUMuD4YzLA2nyYG8tg2HKCCBg4aDamJKypRQWW1Ca2kSV8 -p X -l scratchpad.bin -k http://url_to_server/download/scratchpad.bin
+```
+
+OpenCL specific options:
+```
+-d N - start OpenCL device to use (default: 0)
+-i N - OpenCL work intensity (default: 18)
+```
+
+To mine on 2nd GPU only more intensive:
+```
+minerd -a wildkeccak_ocl -d 1 -t 1 -i 22 ...
+```
+
+To mine on CPU (algorithm from original fork):
+```
+minerd -a wildkeccak ... 
+```
+
+
+Run "minerd --help" to see all options.
 
 
 
