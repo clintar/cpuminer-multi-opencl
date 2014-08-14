@@ -97,15 +97,20 @@ void applog(int prio, const char *fmt, ...)
         time(&now);
         localtime_r(&now, &tm);
 
+		struct timeval curTime;
+		gettimeofday(&curTime, NULL);
+		int milli = curTime.tv_usec / 1000;
+
         len = 40 + strlen(fmt) + 2;
         f = alloca(len);
-        sprintf(f, "[%d-%02d-%02d %02d:%02d:%02d] %s\n",
+        sprintf(f, "[%d-%02d-%02d %02d:%02d:%02d.%03d] %s\n",
             tm.tm_year + 1900,
             tm.tm_mon + 1,
             tm.tm_mday,
             tm.tm_hour,
             tm.tm_min,
             tm.tm_sec,
+            milli,
             fmt);
         pthread_mutex_lock(&applog_lock);
         vfprintf(stderr, f, ap);	/* atomic write to stderr */
