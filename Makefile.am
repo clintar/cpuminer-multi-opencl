@@ -28,7 +28,8 @@ minerd_SOURCES	= elist.h \
 minerd_LDFLAGS	= $(PTHREAD_FLAGS) 
 minerd_LDADD	= @LIBCURL@ @JANSSON_LIBS@ @PTHREAD_LIBS@ @WS2_LIBS@ -lOpenCL
 minerd_CPPFLAGS = @LIBCURL_CPPFLAGS@
-minerd_CFLAGS   = -std=gnu11 -O3 -march=native -fPIC -flto
+minerd_CFLAGS   = -std=gnu11 -O3 -fPIC -flto 
+#-march=native 
 
 if HAVE_WINDOWS
 minerd_CFLAGS += -Wl,--stack,10485760 -DCURL_STATICLIB

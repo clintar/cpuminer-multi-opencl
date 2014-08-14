@@ -1457,9 +1457,11 @@ static void *miner_thread(void *userdata) {
         else
             max64 = g_work_time + (have_longpoll ? LP_SCANTIME : opt_scantime) - time(NULL );
         max64 *= thr_hashrates[thr_id];
-    	if ((opt_algo == ALGO_WILD_KECCAK_OCL || opt_algo == ALGO_WILD_KECCAK_OCL_MULTISTEP) && max64 < opt_work_size)
-            max64 = opt_work_size;
-        if (max64 <= 0) {
+    	if ((opt_algo == ALGO_WILD_KECCAK_OCL || opt_algo == ALGO_WILD_KECCAK_OCL_MULTISTEP)) {
+            max64 /= opt_work_size;
+            max64 = (max64 == 0 ? 1 : max64) * opt_work_size;
+    	}
+    	else if (max64 <= 0) {
                 max64 = 0x1fffffLL;
         }
         if (*nonceptr + max64 > end_nonce)
@@ -1509,8 +1511,12 @@ static void *miner_thread(void *userdata) {
         if (rc && !opt_benchmark && !submit_work(mythr, &work))
             break;
 
-    	if (opt_algo == ALGO_WILD_KECCAK_OCL || opt_algo == ALGO_WILD_KECCAK_OCL_MULTISTEP)
+    	if (opt_algo == ALGO_WILD_KECCAK_OCL || opt_algo == ALGO_WILD_KECCAK_OCL_MULTISTEP) {
     		*nonceptr = start_nonce + hashes_done - 1;
+
+            if (*nonceptr + opt_work_size > end_nonce)
+            	*nonceptr = end_nonce;
+    	}
     }
 
 out: tq_freeze(mythr->q);

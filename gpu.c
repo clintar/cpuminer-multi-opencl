@@ -340,7 +340,6 @@ void runGPU(GPU* gpu, uint32_t work_size, size_t offset, cl_ulong target)
 
 	size_t off = offset;
 	size_t num = work_size;
-	size_t threads = 256;
 
 	if (gpu->update_scratchpad)
 		update_scratchpad_gpu(gpu, pscratchpad_buff, scratchpad_size, 8);
@@ -358,7 +357,7 @@ void runGPU(GPU* gpu, uint32_t work_size, size_t offset, cl_ulong target)
 		cl_ulong targetArg = target;
 		err = clSetKernelArg(gpu->kernel, 4, sizeof(targetArg), &targetArg);
 		CHECK_OPENCL_ERROR(err, gpu->threadNumber);
-		err = clEnqueueNDRangeKernel(gpu->commandQueue, gpu->kernel, 1, &off, &num, &threads, 0, NULL, NULL);
+		err = clEnqueueNDRangeKernel(gpu->commandQueue, gpu->kernel, 1, &off, &num, NULL, 0, NULL, NULL);
 		CHECK_OPENCL_ERROR(err, gpu->threadNumber);
 	} else if (gpu->type == 1) {
 		size_t num2 = work_size * 6;
@@ -366,7 +365,7 @@ void runGPU(GPU* gpu, uint32_t work_size, size_t offset, cl_ulong target)
 		CHECK_OPENCL_ERROR(err, gpu->threadNumber);
 		err = clSetKernelArg(gpu->initKernel, 1, sizeof(cl_mem), &gpu->stateBuffer);
 		CHECK_OPENCL_ERROR(err, gpu->threadNumber);
-		err = clEnqueueNDRangeKernel(gpu->commandQueue, gpu->initKernel, 1, &off, &num, &threads, 0, NULL, NULL);
+		err = clEnqueueNDRangeKernel(gpu->commandQueue, gpu->initKernel, 1, &off, &num, NULL, 0, NULL, NULL);
 		CHECK_OPENCL_ERROR(err, gpu->threadNumber);
 
 		for (cl_int round = 0; round < 24; round++) {
@@ -377,20 +376,20 @@ void runGPU(GPU* gpu, uint32_t work_size, size_t offset, cl_ulong target)
 				CHECK_OPENCL_ERROR(err, gpu->threadNumber);
 				err = clSetKernelArg(gpu->mixinKernel, 2, sizeof(cl_int), &gpu->scratchpad_size);
 				CHECK_OPENCL_ERROR(err, gpu->threadNumber);
-				err = clEnqueueNDRangeKernel(gpu->commandQueue, gpu->mixinKernel, 1, NULL, &num2, &threads, 0, NULL, NULL);
+				err = clEnqueueNDRangeKernel(gpu->commandQueue, gpu->mixinKernel, 1, NULL, &num2, NULL, 0, NULL, NULL);
 				CHECK_OPENCL_ERROR(err, gpu->threadNumber);
 			}
 			err = clSetKernelArg(gpu->rndKernel, 0, sizeof(cl_mem), &gpu->stateBuffer);
 			CHECK_OPENCL_ERROR(err, gpu->threadNumber);
 			err = clSetKernelArg(gpu->rndKernel, 1, sizeof(round), &round);
 			CHECK_OPENCL_ERROR(err, gpu->threadNumber);
-			err = clEnqueueNDRangeKernel(gpu->commandQueue, gpu->rndKernel, 1, &off, &num, &threads, 0, NULL, NULL);
+			err = clEnqueueNDRangeKernel(gpu->commandQueue, gpu->rndKernel, 1, &off, &num, NULL, 0, NULL, NULL);
 			CHECK_OPENCL_ERROR(err, gpu->threadNumber);
 		}
 
 		err = clSetKernelArg(gpu->init2Kernel, 0, sizeof(cl_mem), &gpu->stateBuffer);
 		CHECK_OPENCL_ERROR(err, gpu->threadNumber);
-		err = clEnqueueNDRangeKernel(gpu->commandQueue, gpu->init2Kernel, 1, &off, &num, &threads, 0, NULL, NULL);
+		err = clEnqueueNDRangeKernel(gpu->commandQueue, gpu->init2Kernel, 1, &off, &num, NULL, 0, NULL, NULL);
 		CHECK_OPENCL_ERROR(err, gpu->threadNumber);
 		for (cl_int round = 0; round < 24; round++) {
 			if (round != 0) {
@@ -400,14 +399,14 @@ void runGPU(GPU* gpu, uint32_t work_size, size_t offset, cl_ulong target)
 				CHECK_OPENCL_ERROR(err, gpu->threadNumber);
 				err = clSetKernelArg(gpu->mixinKernel, 2, sizeof(cl_int), &gpu->scratchpad_size);
 				CHECK_OPENCL_ERROR(err, gpu->threadNumber);
-				err = clEnqueueNDRangeKernel(gpu->commandQueue, gpu->mixinKernel, 1, NULL, &num2, &threads, 0, NULL, NULL);
+				err = clEnqueueNDRangeKernel(gpu->commandQueue, gpu->mixinKernel, 1, NULL, &num2, NULL, 0, NULL, NULL);
 				CHECK_OPENCL_ERROR(err, gpu->threadNumber);
 			}
 			err = clSetKernelArg(gpu->rndKernel, 0, sizeof(cl_mem), &gpu->stateBuffer);
 			CHECK_OPENCL_ERROR(err, gpu->threadNumber);
 			err = clSetKernelArg(gpu->rndKernel, 1, sizeof(round), &round);
 			CHECK_OPENCL_ERROR(err, gpu->threadNumber);
-			err = clEnqueueNDRangeKernel(gpu->commandQueue, gpu->rndKernel, 1, &off, &num, &threads, 0, NULL, NULL);
+			err = clEnqueueNDRangeKernel(gpu->commandQueue, gpu->rndKernel, 1, &off, &num, NULL, 0, NULL, NULL);
 			CHECK_OPENCL_ERROR(err, gpu->threadNumber);
 		}
 
@@ -418,7 +417,7 @@ void runGPU(GPU* gpu, uint32_t work_size, size_t offset, cl_ulong target)
 		cl_ulong targetArg = target;
 		err = clSetKernelArg(gpu->resultKernel, 2, sizeof(targetArg), &targetArg);
 		CHECK_OPENCL_ERROR(err, gpu->threadNumber);
-		err = clEnqueueNDRangeKernel(gpu->commandQueue, gpu->resultKernel, 1, &off, &num, &threads, 0, NULL, NULL);
+		err = clEnqueueNDRangeKernel(gpu->commandQueue, gpu->resultKernel, 1, &off, &num, NULL, 0, NULL, NULL);
 		CHECK_OPENCL_ERROR(err, gpu->threadNumber);
 	}
 
@@ -437,8 +436,10 @@ int scanhash_wildkeccak_gpu(int thr_id, GPU *gpu, uint32_t *pdata, const uint32_
     	memset(gpu->output, 0, OUTPUT_SIZE * sizeof(uint64_t));
     	CopyBufferToDevice(gpu->commandQueue, gpu->outputBuffer, gpu->output, OUTPUT_SIZE * sizeof(uint64_t));
 
-    	uint32_t work_size = opt_work_size + n > max_nonce ? max_nonce - n : opt_work_size;
-        runGPU(gpu, work_size, n, *((uint64_t*)&ptarget[6]));
+    	if (opt_work_size + n > max_nonce)
+    		break;
+
+        runGPU(gpu, opt_work_size, n, *((uint64_t*)&ptarget[6]));
 
     	CopyBufferToHost(gpu->commandQueue, gpu->outputBuffer, gpu->output, OUTPUT_SIZE * sizeof(uint64_t));
     	for (uint32_t i = 0; i < gpu->output[OUTPUT_SIZE-1] && i < OUTPUT_SIZE; i++) {
@@ -446,11 +447,11 @@ int scanhash_wildkeccak_gpu(int thr_id, GPU *gpu, uint32_t *pdata, const uint32_
             *nonceptr = found_nonce;
             wild_keccak_hash_dbl_use_global_scratch((uint8_t*)pdata, 81, (uint8_t*)hash);
             if (unlikely(hash[7] < ptarget[7])) {
-                *hashes_done = n - first_nonce + work_size;
+                *hashes_done = n - first_nonce + opt_work_size;
                 return true;
             }
     	}
-    	n += work_size;
+    	n += opt_work_size;
 
     } while (likely((n < max_nonce && !work_restart[thr_id].restart)));
 
