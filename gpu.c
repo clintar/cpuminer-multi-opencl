@@ -450,6 +450,8 @@ int scanhash_wildkeccak_gpu(int thr_id, GPU *gpu, uint32_t *pdata, const uint32_
                 *hashes_done = n - first_nonce + opt_work_size;
                 return true;
             }
+            else
+            	applog(LOG_ERR, "[GPU%u] share doesn't validate on CPU, hash=%08x, target=%08x", gpu->threadNumber, hash[7], ptarget[7]);
     	}
     	n += opt_work_size;
 

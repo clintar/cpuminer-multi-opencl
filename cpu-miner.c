@@ -117,6 +117,9 @@ static const char *algo_names[] = {
 
 int opt_device = 0;
 int opt_work_size = (1 << 18);
+double total_probability = 0.0;
+uint64_t total_hashes_done = 0;
+struct timeval tv_total_start;
 
 bool opt_debug = false;
 bool opt_protocol = false;
@@ -941,11 +944,17 @@ static void share_result(int result, struct work *work, const char *reason) {
     for (i = 0; i < opt_n_threads; i++)
         hashrate += thr_hashrates[i];
     result ? accepted_count++ : rejected_count++;
+
+	struct timeval tv_end, tv_start = tv_total_start, diff;
+	gettimeofday(&tv_end, NULL );
+	timeval_subtract(&diff, &tv_end, &tv_start);
     pthread_mutex_unlock(&stats_lock);
 
-    applog(LOG_INFO, "accepted: %lu/%lu (%.2f%%), %.2f h/s at diff %.0f %s",
+    applog(LOG_INFO, "eff: %.0f%% @ %.0f kh/s, accepted: %lu/%lu (%.2f%%), %.0f kh/s at diff %.0f %s",
+    		total_probability > 0.0 ? 100.0 * accepted_count / total_probability : 100,
+    		(diff.tv_usec || diff.tv_sec) ? (double)(total_hashes_done / (diff.tv_sec + diff.tv_usec / 1000000)) / 1000 : 0,
            accepted_count, accepted_count + rejected_count,
-           100. * accepted_count / (accepted_count + rejected_count), hashrate,
+           100. * accepted_count / (accepted_count + rejected_count), hashrate / 1000,
            (((double) 0xffffffff) / (work ? work->target[7] : rpc2_target)),
            result ? "(yay!!!)" : "(booooo)");
 
@@ -1517,6 +1526,10 @@ static void *miner_thread(void *userdata) {
             if (*nonceptr + opt_work_size > end_nonce)
             	*nonceptr = end_nonce;
     	}
+        pthread_mutex_lock(&stats_lock);
+        total_hashes_done += hashes_done;
+        total_probability += (double) hashes_done / (((double) 0xffffffff) / work.target[7]);
+        pthread_mutex_unlock(&stats_lock);
     }
 
 out: tq_freeze(mythr->q);
@@ -2594,6 +2607,7 @@ int main(int argc, char *argv[]) {
     }
 
     /* start mining threads */
+    gettimeofday(&tv_total_start, NULL );
     for (i = 0; i < opt_n_threads; i++) {
         thr = &thr_info[i];
 
