@@ -1072,6 +1072,29 @@ out:
     return ret;
 }
 
+bool stratum_keepalived(struct stratum_ctx *sctx, const char *rpc2_id) {
+
+
+        json_t *val = NULL, *res_val, *err_val;
+        char *s, *sret;
+        json_error_t err;
+        bool ret = false;
+
+	if(jsonrpc_2) {
+	     s = malloc(300 + strlen(rpc2_id));
+	     snprintf(s, 128, "{\"method\": \"keepalived\", \"params\": {\"id\": \"%s\"}, \"id\":1}\r\n", rpc2_id);
+	} else {
+            return true ;
+
+        }
+        if (!stratum_send_line(sctx, s))
+                goto out;
+        ret = true;
+out:
+        free(s);
+        return ret;
+}
+
 bool stratum_authorize(struct stratum_ctx *sctx, const char *user, const char *pass)
 {
     json_t *val = NULL, *res_val, *err_val;
