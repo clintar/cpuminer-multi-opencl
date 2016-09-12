@@ -1856,12 +1856,13 @@ static bool stratum_handle_response(char *buf) {
         json_t *status = NULL;
         if(res_val) 
             status = json_object_get(res_val, "status");
-        const char *s = json_string_value(status);
-        if ( !strcmp(s, "KEEPALIVED") ) {
-            applog(LOG_INFO, "Keepalive receveid");
-            goto out;
-        }
         if(status) {
+            const char *s = json_string_value(status);
+            if ( !strcmp(s, "KEEPALIVED") ) {
+                applog(LOG_INFO, "Keepalive receveid");
+                goto out;
+            }
+
             valid = !strcmp(s, "OK") && json_is_null(err_val);
         } else {
             valid = json_is_null(err_val);
