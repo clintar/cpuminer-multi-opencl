@@ -2358,6 +2358,10 @@ bool download_inital_scratchpad(const char* path_to, const char* url)
     char curl_error_buff[CURL_ERROR_SIZE] = {0};
     curl = curl_easy_init();
     if (curl) {
+       if (opt_proxy) {
+            curl_easy_setopt(curl, CURLOPT_PROXY, opt_proxy);
+            curl_easy_setopt(curl, CURLOPT_PROXYTYPE, opt_proxy_type);
+        }
         fp = fopen(path_to,"wb");
         curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, curl_error_buff);
         curl_easy_setopt(curl, CURLOPT_URL, url);
