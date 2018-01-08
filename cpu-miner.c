@@ -2460,6 +2460,7 @@ int main(int argc, char *argv[]) {
 		applog(LOG_INFO, "hugetlb not available");
 #endif
 		pscratchpad_buff = malloc(sz);
+//		pscratchpad_buff = (uint64_t*)aligned_alloc(sz,4096);
 		if(!pscratchpad_buff)
 		{
 			applog(LOG_ERR, "scratchpad allocation failed");

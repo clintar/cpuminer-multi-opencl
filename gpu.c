@@ -195,6 +195,14 @@ cl_mem DeviceMalloc(cl_context m_context, size_t size)
 	return mem;
 }
 
+cl_mem DeviceMalloc_single(cl_context m_context, size_t size)
+{
+        cl_int err;
+        cl_mem mem = clCreateBuffer(m_context, CL_MEM_READ_ONLY, size, NULL, &err);
+        CHECK_OPENCL_ERROR(err, 0);
+
+        return mem;
+}
 void CopyBufferToDevice(cl_command_queue queue, cl_mem buffer, void* h_Buffer, size_t size)
 {
 
@@ -318,7 +326,7 @@ GPU* initGPU(uint32_t id, uint32_t type) {
 	}
 	gpu->inputBuffer = DeviceMalloc(gpu->context, 256);
 	gpu->outputBuffer = DeviceMalloc(gpu->context, OUTPUT_SIZE * sizeof(cl_ulong));
-	gpu->scratchpadBuffer = DeviceMalloc(gpu->context, WILD_KECCAK_SCRATCHPAD_BUFFSIZE);
+	gpu->scratchpadBuffer = DeviceMalloc_single(gpu->context, WILD_KECCAK_SCRATCHPAD_BUFFSIZE);
 	if (gpu->type == 1)
 		gpu->stateBuffer = DeviceMalloc(gpu->context, MAX_WORK_SIZE * 8 * 25);
 
@@ -465,6 +473,11 @@ void update_scratchpad_gpu(GPU *gpu, void* scratchpad, size_t size, int hashSize
 {
 	applog(LOG_INFO, "[GPU%u] scratchpad update %u", gpu->threadNumber, size);
 	gpu->update_scratchpad = false;
-	CopyBufferToDevice(gpu->commandQueue, gpu->scratchpadBuffer, scratchpad, size * hashSize);
+//	CopyBufferToDevice(gpu->commandQueue, gpu->scratchpadBuffer, scratchpad, size * hashSize);
+	uint64_t * tmp_scratchbuf = clEnqueueMapBuffer(gpu->commandQueue, gpu->scratchpadBuffer, CL_TRUE, CL_MAP_WRITE, 0, size * hashSize, 0, NULL, NULL, NULL);
+	memcpy(tmp_scratchbuf,scratchpad,size * hashSize);
+	clEnqueueUnmapMemObject(gpu->commandQueue, gpu->scratchpadBuffer, tmp_scratchbuf, 0, NULL, NULL);
+	clFinish(gpu->commandQueue);
 	gpu->scratchpad_size = (uint32_t)size / 4;
+
 }
