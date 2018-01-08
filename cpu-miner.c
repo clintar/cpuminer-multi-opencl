@@ -619,6 +619,9 @@ bool addendum_decode(const json_t *addm)
     {
         //TODO: ADD SPLIT HANDLING HERE
         applog(LOG_ERR, "JSON prev_id in addendum missmatched with current_scratchpad_hi.prevhash");
+        revert_scratchpad();
+        //init re-login
+        strcpy(rpc2_id, "");
         return false;
     }
 
