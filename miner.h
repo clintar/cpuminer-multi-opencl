@@ -6,6 +6,7 @@
 #include "gpu.h"
 
 #include <stdbool.h>
+#include <string.h>
 #include <inttypes.h>
 #include <sys/time.h>
 #include <pthread.h>
@@ -338,6 +339,7 @@ struct stratum_ctx {
     pthread_mutex_t work_lock;
 };
 
+bool stratum_keepalived(struct stratum_ctx *sctx , const char *rpc2_id);
 bool stratum_socket_full(struct stratum_ctx *sctx, int timeout);
 bool stratum_send_line(struct stratum_ctx *sctx, char *s);
 char *stratum_recv_line(struct stratum_ctx *sctx);
