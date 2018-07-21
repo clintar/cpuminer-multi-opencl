@@ -1,5 +1,30 @@
 #include "miner.h"
 
+#define NSEC 1e-9
+double timespec_to_double(struct timespec *t)
+{
+    return ((double)t->tv_sec) + ((double) t->tv_nsec) * NSEC;
+}
+
+void double_to_timespec(double dt, struct timespec *t)
+{
+    t->tv_sec = (long)dt;
+    t->tv_nsec = (long)((dt - t->tv_sec) / NSEC);
+}
+
+void get_time(struct timespec *t)
+{
+    clock_gettime(CLOCK_MONOTONIC, t);
+}
+// Ratio of time of sleeping before rechecking if task is done (0-1)
+#define SLEEP_RECHECK_RATIO 0.60
+// Ratio of time to busy wait for the solution (0-1)
+// The higher value the higher CPU usage with Nvidia
+#define SLEEP_SKIP_RATIO 0.001
+
+double		kern_avg_run_time = 0;
+
+
 enum platform_type {
 	AMD,
 	NVIDIA,
@@ -210,14 +235,42 @@ void CopyBufferToDevice(cl_command_queue queue, cl_mem buffer, void* h_Buffer, s
 	CHECK_OPENCL_ERROR(err, 0);
 }
 
-void CopyBufferToHost  (cl_command_queue queue, cl_mem buffer, void* h_Buffer, size_t size)
+void CopyBufferToHost  (cl_command_queue queue, cl_mem buffer, void* h_Buffer, size_t size, cl_event* readEvent, struct timespec *target_time)
 {
-	cl_int err = clEnqueueReadBuffer (queue, buffer, CL_TRUE, 0, size, h_Buffer, 0, NULL, NULL);
+	cl_int err = clEnqueueReadBuffer (queue, buffer, CL_FALSE, 0, size, h_Buffer, 0, NULL, readEvent);
+    struct timespec start_time;
+    get_time(&start_time);
+    double dtarget = timespec_to_double(target_time);
+    cl_int readStatus;
+    clGetEventInfo(*readEvent, CL_EVENT_COMMAND_EXECUTION_STATUS,
+	    sizeof (cl_int), &readStatus, NULL);
+    while (readStatus != CL_COMPLETE && SLEEP_SKIP_RATIO != 1)
+      {
+	struct timespec t;
+	get_time(&t);
+	double dt = timespec_to_double(&t);
+	double delta = dtarget - dt;
+	if (delta < 0)
+	    break;
+	double_to_timespec(delta * SLEEP_RECHECK_RATIO, &t);
+	nanosleep(&t, NULL);
+	clGetEventInfo(*readEvent, CL_EVENT_COMMAND_EXECUTION_STATUS,
+		sizeof (cl_int), &readStatus, NULL);
+      }
+    clWaitForEvents(1, readEvent);
+    struct timespec end_time;
+    get_time(&end_time);
+    double dstart, dend, delta;
+    dstart = timespec_to_double(&start_time);
+    dend = timespec_to_double(&end_time);
+    delta = dend - dstart;
+    kern_avg_run_time = kern_avg_run_time * 6.0 / 10.0 + delta * (4.0 / 10.0);
+	
+    kern_avg_run_time *= (1 - (double)SLEEP_SKIP_RATIO);
 	CHECK_OPENCL_ERROR(err, 0);
 }
 
 GPU* initGPU(uint32_t id, uint32_t type) {
-	applog(LOG_DEBUG, "[GPU%u] Init", id);
 	GPU* gpu = (GPU*)calloc(1, sizeof(GPU));
 	gpu->threadNumber = id;
 	gpu->type = type;
@@ -255,8 +308,11 @@ GPU* initGPU(uint32_t id, uint32_t type) {
 	free(platforms);
 
 	if (gpu->device == NULL) {
-		applog(LOG_INFO, "[GPU%u] Device not found", id);
 		return NULL;
+	}
+	else
+	{
+		applog(LOG_DEBUG, "[GPU%u] Init", id);
 	}
 
 	enum platform_type platformType = PrintPlatformInfo(id, platform);
@@ -264,7 +320,8 @@ GPU* initGPU(uint32_t id, uint32_t type) {
 	PrintDeviceInfo(id, gpu->device, &maxMem, &maxBuffer);
 
 	gpu->context = clCreateContext(NULL, 1, &gpu->device, NULL, NULL, NULL);
-	gpu->commandQueue = clCreateCommandQueue(gpu->context, gpu->device, 0, NULL);
+	gpu->commandQueue = clCreateCommandQueueWithProperties(gpu->context, gpu->device, 0, NULL);
+	gpu->commandQueue2 = clCreateCommandQueueWithProperties(gpu->context, gpu->device, 0, NULL);
 
 	const char *filename = gpu->type == 0 ? "wild_keccak.cl" : "wild_keccak_multi.cl";
 	char *source = convertToString(filename);
@@ -312,13 +369,17 @@ GPU* initGPU(uint32_t id, uint32_t type) {
 	}
 
 	if (gpu->type == 0)
+	{
 		gpu->kernel = GetKernel(gpu->program, "search");
+		gpu->kernel2 = GetKernel(gpu->program, "addendum");
+	}
 	else if (gpu->type == 1) {
 		gpu->initKernel = GetKernel(gpu->program, "init");
 		gpu->init2Kernel = GetKernel(gpu->program, "init2");
 		gpu->rndKernel = GetKernel(gpu->program, "rnd");
 		gpu->mixinKernel = GetKernel(gpu->program, "mixin");
 		gpu->resultKernel = GetKernel(gpu->program, "result");
+		gpu->kernel2 = GetKernel(gpu->program, "addendum");
 	}
 	else {
 		applog(LOG_ERR, "[GPU%u] kernel type %u not supported", id, gpu->type);
@@ -330,17 +391,18 @@ GPU* initGPU(uint32_t id, uint32_t type) {
 	if (gpu->type == 1)
 		gpu->stateBuffer = DeviceMalloc(gpu->context, MAX_WORK_SIZE * 8 * 25);
 
-	gpu->output = (uint32_t*)malloc(OUTPUT_SIZE *  sizeof(cl_ulong));
-	gpu->update_scratchpad = true;
+	gpu->padd_buff = DeviceMalloc(gpu->context, 640);
+	gpu->output = (uint64_t*)malloc(OUTPUT_SIZE *  sizeof(cl_ulong));
+	gpu->scratchpad_initialized = false;
 
 	applog(LOG_INFO, "[GPU%u] initialized successfully", id);
 	return gpu;
 }
 
-void runGPU(GPU* gpu, uint32_t work_size, size_t offset, cl_ulong target)
+void runGPU(GPU* gpu, uint32_t work_size, size_t offset, cl_ulong target, size_t work_groups)
 {
-	if (opt_debug)
-		applog(LOG_INFO, "[GPU%u] run work = %u, offset = %u", gpu->threadNumber, work_size, offset);
+//	if (opt_debug)
+//		applog(LOG_INFO, "[GPU%u] run work = %u, offset = %u", gpu->threadNumber, work_size, offset);
 	if (gpu->type == 1 && work_size > MAX_WORK_SIZE) {
 		applog(LOG_ERR, "[GPU%u] work size %u more then maximum allowed %u. Decrease scan time.", gpu->threadNumber, work_size, MAX_WORK_SIZE);
 		exit(1);
@@ -348,12 +410,17 @@ void runGPU(GPU* gpu, uint32_t work_size, size_t offset, cl_ulong target)
 
 	size_t off = offset;
 	size_t num = work_size;
+	size_t workgroups = work_groups;
 
-	if (gpu->update_scratchpad)
+
+	if (!gpu->scratchpad_initialized)
+	{
 		update_scratchpad_gpu(gpu, pscratchpad_buff, scratchpad_size, 8);
+		gpu->scratchpad_initialized = true;
+	}
 
-	cl_int err;
-	if (gpu->type == 0) {
+		cl_int err;
+		if (gpu->type == 0) {
 		err = clSetKernelArg(gpu->kernel, 0, sizeof(cl_mem), &gpu->inputBuffer);
 		CHECK_OPENCL_ERROR(err, gpu->threadNumber);
 		err = clSetKernelArg(gpu->kernel, 1, sizeof(cl_mem), &gpu->outputBuffer);
@@ -365,7 +432,15 @@ void runGPU(GPU* gpu, uint32_t work_size, size_t offset, cl_ulong target)
 		cl_ulong targetArg = target;
 		err = clSetKernelArg(gpu->kernel, 4, sizeof(targetArg), &targetArg);
 		CHECK_OPENCL_ERROR(err, gpu->threadNumber);
-		err = clEnqueueNDRangeKernel(gpu->commandQueue, gpu->kernel, 1, &off, &num, NULL, 0, NULL, NULL);
+		if(workgroups == 0)
+		{
+			err = clEnqueueNDRangeKernel(gpu->commandQueue, gpu->kernel, 1, &off, &num, NULL, 0, NULL, NULL);
+		}
+		else
+		{
+			err = clEnqueueNDRangeKernel(gpu->commandQueue, gpu->kernel, 1, &off, &num, &workgroups, 0, NULL, NULL);
+		}
+	
 		CHECK_OPENCL_ERROR(err, gpu->threadNumber);
 	} else if (gpu->type == 1) {
 		size_t num2 = work_size * 6;
@@ -373,7 +448,14 @@ void runGPU(GPU* gpu, uint32_t work_size, size_t offset, cl_ulong target)
 		CHECK_OPENCL_ERROR(err, gpu->threadNumber);
 		err = clSetKernelArg(gpu->initKernel, 1, sizeof(cl_mem), &gpu->stateBuffer);
 		CHECK_OPENCL_ERROR(err, gpu->threadNumber);
-		err = clEnqueueNDRangeKernel(gpu->commandQueue, gpu->initKernel, 1, &off, &num, NULL, 0, NULL, NULL);
+		if(workgroups == 0)
+		{
+			err = clEnqueueNDRangeKernel(gpu->commandQueue, gpu->initKernel, 1, &off, &num, NULL, 0, NULL, NULL);
+		}
+		else
+		{
+			err = clEnqueueNDRangeKernel(gpu->commandQueue, gpu->initKernel, 1, &off, &num, &workgroups, 0, NULL, NULL);
+		}
 		CHECK_OPENCL_ERROR(err, gpu->threadNumber);
 
 		for (cl_int round = 0; round < 24; round++) {
@@ -429,8 +511,9 @@ void runGPU(GPU* gpu, uint32_t work_size, size_t offset, cl_ulong target)
 		CHECK_OPENCL_ERROR(err, gpu->threadNumber);
 	}
 
-	err = clFinish(gpu->commandQueue);
-	CHECK_OPENCL_ERROR(err, gpu->threadNumber);
+// Don't clFinish as part of nvidia busywait fix
+//	err = clFinish(gpu->commandQueue);
+//	CHECK_OPENCL_ERROR(err, gpu->threadNumber);
 }
 int scanhash_wildkeccak_gpu(int thr_id, GPU *gpu, uint32_t *pdata, const uint32_t *ptarget, uint32_t max_nonce, unsigned long *hashes_done)
 {
@@ -446,10 +529,23 @@ int scanhash_wildkeccak_gpu(int thr_id, GPU *gpu, uint32_t *pdata, const uint32_
 
     	if (opt_work_size + n > max_nonce)
     		break;
+    struct timespec start_time, target_time;
+    get_time(&start_time);
+    double dstart, dtarget = 0;
+    dstart = timespec_to_double(&start_time);
+    dtarget = dstart + kern_avg_run_time;
+    double_to_timespec(dtarget, &target_time);
+        runGPU(gpu, opt_work_size, n, *((uint64_t*)&ptarget[6]), opt_work_groups);
+		    // compute the expected run time of the kernels that have been queued
 
-        runGPU(gpu, opt_work_size, n, *((uint64_t*)&ptarget[6]));
-
-    	CopyBufferToHost(gpu->commandQueue, gpu->outputBuffer, gpu->output, OUTPUT_SIZE * sizeof(uint64_t));
+	
+	
+   // Most OpenCL implementations of clEnqueueReadBuffer in blocking mode are
+   // good, except Nvidia implementing it as a wasteful busywait, so let's
+   // work around it by trying to sleep just a bit less than the expected
+   // amount of time.
+		cl_event readEvent;
+    	CopyBufferToHost(gpu->commandQueue, gpu->outputBuffer, gpu->output, OUTPUT_SIZE * sizeof(uint64_t), &readEvent, &target_time);
     	for (uint32_t i = 0; i < gpu->output[OUTPUT_SIZE-1] && i < OUTPUT_SIZE; i++) {
     		uint64_t found_nonce = gpu->output[i];
             *nonceptr = found_nonce;
@@ -458,26 +554,50 @@ int scanhash_wildkeccak_gpu(int thr_id, GPU *gpu, uint32_t *pdata, const uint32_
                 *hashes_done = n - first_nonce + opt_work_size;
                 return true;
             }
-            else
+            else if((gpu->scratchpad_size == scratchpad_size) || opt_debug)
             	applog(LOG_ERR, "[GPU%u] share doesn't validate on CPU, hash=%08x, target=%08x", gpu->threadNumber, hash[7], ptarget[7]);
     	}
     	n += opt_work_size;
-
+		
     } while (likely((n < max_nonce && !work_restart[thr_id].restart)));
 
     *hashes_done = n - first_nonce;
     return 0;
 }
+void runApplyAddendum(GPU* gpu, uint64_t* apadd_buff, size_t count/*uint64 units*/, uint64_t size)
+{
+	
+	size_t num = 1;
+	cl_int err;
+	CopyBufferToDevice(gpu->commandQueue2, gpu->padd_buff, apadd_buff, 640);
+	if (opt_debug)
+		applog(LOG_INFO, "[GPU%u] applying addendum", gpu->threadNumber);
+	err = clSetKernelArg(gpu->kernel2, 0, sizeof(cl_mem), &gpu->scratchpadBuffer);
+	CHECK_OPENCL_ERROR(err, gpu->threadNumber);
+	err = clSetKernelArg(gpu->kernel2, 1, sizeof(cl_mem), &gpu->padd_buff);
+	CHECK_OPENCL_ERROR(err, gpu->threadNumber);	
+	err = clSetKernelArg(gpu->kernel2, 2, sizeof(cl_int), &size);
+	CHECK_OPENCL_ERROR(err, gpu->threadNumber);
+	err = clSetKernelArg(gpu->kernel2, 3, sizeof(cl_int), &count);
+	CHECK_OPENCL_ERROR(err, gpu->threadNumber);
+
+	gpu->scratchpad_size = (uint64_t)(size + count) / 4 ;
+	if (opt_debug)
+		applog(LOG_INFO, "[GPU%u] scratchpad size: %" PRIu64 ".", gpu->threadNumber, gpu->scratchpad_size);
+	err = clEnqueueNDRangeKernel(gpu->commandQueue2, gpu->kernel2, 1, NULL, &num, &num, 0, NULL, NULL);
+	CHECK_OPENCL_ERROR(err, gpu->threadNumber);
+	err = clFinish(gpu->commandQueue2);
+	CHECK_OPENCL_ERROR(err, gpu->threadNumber);
+	if (opt_debug)
+		applog(LOG_INFO, "[GPU%u] addendum applied.", gpu->threadNumber);
+}
 
 void update_scratchpad_gpu(GPU *gpu, void* scratchpad, size_t size, int hashSize)
 {
 	applog(LOG_INFO, "[GPU%u] scratchpad update %u", gpu->threadNumber, size);
-	gpu->update_scratchpad = false;
-//	CopyBufferToDevice(gpu->commandQueue, gpu->scratchpadBuffer, scratchpad, size * hashSize);
-	uint64_t * tmp_scratchbuf = clEnqueueMapBuffer(gpu->commandQueue, gpu->scratchpadBuffer, CL_TRUE, CL_MAP_WRITE, 0, size * hashSize, 0, NULL, NULL, NULL);
-	memcpy(tmp_scratchbuf,scratchpad,size * hashSize);
-	clEnqueueUnmapMemObject(gpu->commandQueue, gpu->scratchpadBuffer, tmp_scratchbuf, 0, NULL, NULL);
-	clFinish(gpu->commandQueue);
+	gpu->scratchpad_initialized = true;
+	CopyBufferToDevice(gpu->commandQueue, gpu->scratchpadBuffer, scratchpad, size * hashSize);
 	gpu->scratchpad_size = (uint32_t)size / 4;
-
+	if (opt_debug)
+		applog(LOG_INFO, "[GPU%u] scratchpad size: %" PRIu64 ".", gpu->threadNumber, gpu->scratchpad_size);
 }

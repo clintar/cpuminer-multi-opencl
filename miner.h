@@ -53,7 +53,7 @@ enum {
 
 #undef unlikely
 #undef likely
-#if defined(__GNUC__) && (__GNUC__ > 2) && defined(__OPTIMIZE__)
+#if ((defined(__GNUC__) && (__GNUC__ > 2)) || defined(__INTEL_COMPILER) || defined(__clang__)) && defined(__OPTIMIZE__)
 #define unlikely(expr) (__builtin_expect(!!(expr), 0))
 #define likely(expr) (__builtin_expect(!!(expr), 1))
 #else
@@ -223,6 +223,7 @@ struct work_restart {
 };
 
 extern int opt_work_size;
+extern int opt_work_groups;
 
 extern bool opt_debug;
 extern bool opt_protocol;

@@ -117,6 +117,7 @@ static const char *algo_names[] = {
 
 int opt_device = 0;
 int opt_work_size = (1 << 18);
+int opt_work_groups = 0;
 double total_probability = 0.0;
 uint64_t total_hashes_done = 0;
 struct timeval tv_total_start;
@@ -209,6 +210,7 @@ static char const usage[] =
     wildkeccak_ocl_multistep   WildKeccak OpenCL multistep\n\
     -d  --device=N  start OpenCL device to use (default: 0) \n\
     -i  --intensity=N  OpenCL work intensity (default: 18) \n\
+    -w  --workgroup=N  OpenCL work group count (0-1024, default:0 means auto) \n\
     -k  --scratchpad=URL  URL of inital scratchpad file\n\
     -l  --scratchpad_local_cache=PATH  PATH to local scratchpad file\n\
     -o, --url=URL         URL of mining server\n\
@@ -253,7 +255,7 @@ static char const short_options[] =
 #ifdef HAVE_SYSLOG_H
     "S"
 #endif
-    "i:d:a:c:Dhp:Px:Kqr:R:s:t:T:o:u:O:V:k:l:";
+    "i:w:d:a:c:Dhp:Px:Kqr:R:s:t:T:o:u:O:V:k:l:";
 
 static struct option const options[] = {
     { "algo", 1, NULL, 'a' },
@@ -289,6 +291,7 @@ static struct option const options[] = {
     { "version", 0, NULL, 'V' },
     { "device", 1, NULL, 'd' },
     { "intensity", 1, NULL, 'i' },
+    { "workgroup", 1, NULL, 'w' },
     { 0, 0, 0, 0 }
 };
 
@@ -463,6 +466,12 @@ void reset_scratchpad(void)
 {
     current_scratchpad_hi.height = 0;
     scratchpad_size = 0;
+	if (opt_algo == ALGO_WILD_KECCAK_OCL || opt_algo == ALGO_WILD_KECCAK_OCL_MULTISTEP) {
+		for (int i = 0; i < opt_n_threads; i++)
+		{
+			thr_info[i].gpu->scratchpad_initialized = false;
+		}
+	}
     //unlink(scratchpad_file);
 }
 
@@ -470,7 +479,9 @@ void update_scratchpad(void)
 {
 	if (opt_algo == ALGO_WILD_KECCAK_OCL || opt_algo == ALGO_WILD_KECCAK_OCL_MULTISTEP) {
 		for (int i = 0; i < opt_n_threads; i++)
-			thr_info[i].gpu->update_scratchpad = true;
+		{
+			thr_info[i].gpu->scratchpad_initialized = false;
+		}
 	}
 }
 
@@ -501,10 +512,8 @@ bool apply_addendum(uint64_t* padd_buff, size_t count/*uint64 units*/)
     }
     for(int k = 0; k != count; k++)
         pscratchpad_buff[scratchpad_size+k] = padd_buff[k];
-
+	
     scratchpad_size += count;
-
-    update_scratchpad();
 
     return true;
 }
@@ -640,7 +649,7 @@ bool addendum_decode(const json_t *addm)
         applog(LOG_ERR, "JSON wrong addm hex str len");
         return false;
     }
-    uint64_t* padd_buff = malloc(add_len/2);
+    uint64_t* padd_buff = malloc(640);
     if (!padd_buff)
     {
         applog(LOG_ERR, "out of memory, wanted %zu", add_len/2);
@@ -658,6 +667,16 @@ bool addendum_decode(const json_t *addm)
         applog(LOG_ERR, "JSON Failed to apply_addendum!");
         goto err_out;
     }
+	if (opt_algo == ALGO_WILD_KECCAK_OCL || opt_algo == ALGO_WILD_KECCAK_OCL_MULTISTEP) {
+		for (int i = 0; i < opt_n_threads; i++)
+		{
+			if(thr_info[i].gpu->scratchpad_initialized)
+			{
+				runApplyAddendum(thr_info[i].gpu, padd_buff, add_len/16, thr_info[i].gpu->scratchpad_size * 4);
+			}
+		}
+			
+	}
     free(padd_buff);
 
     push_addendum_info(&current_scratchpad_hi, add_len/16);
@@ -994,7 +1013,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work) {
 
             noncestr = bin2hex(((const unsigned char*)work->data) + 1, 8);
             strcpy(last_found_nonce, noncestr);
-            wild_keccak_hash_dbl_use_global_scratch((uint8_t*)work->data, work->job_len, (uint8_t*)hash);                
+            wild_keccak_hash_dbl_use_global_scratch((uint8_t*)work->data, work->job_len, (uint8_t*)hash);
             hashhex = bin2hex(hash, 32);
             snprintf(s, JSON_BUF_LEN,
                 "{\"method\": \"submit\", \"params\": {\"id\": \"%s\", \"job_id\": \"%s\", \"nonce\": \"%s\", \"result\": \"%s\"}, \"id\":1}\r\n",
@@ -1472,7 +1491,7 @@ static void *miner_thread(void *userdata) {
         else
             max64 = g_work_time + (have_longpoll ? LP_SCANTIME : opt_scantime) - time(NULL );
         max64 *= thr_hashrates[thr_id];
-    	if ((opt_algo == ALGO_WILD_KECCAK_OCL || opt_algo == ALGO_WILD_KECCAK_OCL_MULTISTEP)) {
+    	if (opt_algo == ALGO_WILD_KECCAK_OCL || opt_algo == ALGO_WILD_KECCAK_OCL_MULTISTEP) {
             max64 /= opt_work_size;
             max64 = (max64 == 0 ? 1 : max64) * opt_work_size;
     	}
@@ -1497,7 +1516,7 @@ static void *miner_thread(void *userdata) {
         if (opt_algo == ALGO_WILD_KECCAK)
         	rc = scanhash_wildkeccak(thr_id, work.data, work.target, max_nonce, &hashes_done);
         else
-        	rc = scanhash_wildkeccak_gpu(thr_id, mythr->gpu, work.data, work.target, max_nonce, &hashes_done);
+			rc = scanhash_wildkeccak_gpu(thr_id, mythr->gpu, work.data, work.target, max_nonce, &hashes_done);
 
         /* record scanhash elapsed time */
         gettimeofday(&tv_end, NULL );
@@ -1884,6 +1903,7 @@ static bool stratum_handle_response(char *buf) {
             {
                 //applog(LOG_ERR, "Dump scratchpad file");
                 //dump_scrstchpad_to_file();
+				goto out;
             }
             
             strcpy(rpc2_id, "");
@@ -1982,7 +2002,8 @@ static void *stratum_thread(void *userdata) {
                 stratum_gen_work(&stratum, &g_work);
                 time(&g_work_time);
                 pthread_mutex_unlock(&g_work_lock);
-                applog(LOG_INFO, "Stratum detected new block");
+				if (!opt_quiet)
+					applog(LOG_INFO, "Stratum detected new work");
                 restart_threads();
             }
         } else {
@@ -1994,7 +2015,8 @@ static void *stratum_thread(void *userdata) {
                     time(&g_work_time);
                     pthread_mutex_unlock(&g_work_lock);
                     if (stratum.job.clean) {
-                        applog(LOG_INFO, "Stratum detected new block");
+						if (!opt_quiet)
+							applog(LOG_INFO, "Stratum detected new work");
                         restart_threads();
                     }
             }
@@ -2092,6 +2114,12 @@ static void parse_arg(int key, char *arg) {
         if (v < 10 || v > 30) /* sanity check */
             show_usage_and_exit(1);
         opt_work_size = (1 << v);
+        break;
+    case 'w':
+        v = atoi(arg);
+        if (v < 0 || v > 1024) /* sanity check */
+            show_usage_and_exit(1);
+        opt_work_groups = v;
         break;
     case 'a':
 		for (v = 0; v < ARRAY_SIZE(algo_names); v++) {

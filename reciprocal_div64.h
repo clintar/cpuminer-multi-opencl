@@ -51,11 +51,13 @@ static inline u64 reciprocal_divide64(u64 a, struct reciprocal_value64 R)
 
 static __always_inline uint64_t reciprocal_remainder64(uint64_t A, uint64_t B, struct reciprocal_value64 R)
 {
-	uint64_t div, mod;
+	uint64_t div, mod, sub;
 
 	div = reciprocal_divide64(A, R);
 	mod = A - (uint64_t) (div * B);
-	if (mod >= B) mod -= B;
+        sub = (mod >= B) ? -1:0;
+        mod += sub;
+//	if (mod >= B) mod -= B;
 	return mod;
 }
 

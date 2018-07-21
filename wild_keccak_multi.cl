@@ -186,3 +186,17 @@ __kernel void result(__global ulong*restrict output, __global uint2* buf, const 
     if (UL(&state3) <= target)
 	    output[output[0x0F]++] = nonce;
 }
+
+__kernel void addendum(__global ulong * passed_pscratchpad_buff, __global const ulong * padd_buff,uint const size,uint const count)
+{
+    for(uint i = 0; i < count; i += 4)
+    {
+        ulong global_offset = (padd_buff[i]%(size/4))*4;
+        for(uint j = 0; j != 4; j++)
+        {
+          passed_pscratchpad_buff[global_offset + j] ^= padd_buff[i + j];
+        }
+    }
+  for(uint k = 0; k != count; k++)
+        passed_pscratchpad_buff[size+k] = padd_buff[k];
+}
