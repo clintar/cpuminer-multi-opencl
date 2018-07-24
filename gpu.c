@@ -321,7 +321,7 @@ GPU* initGPU(uint32_t id, uint32_t type) {
 
 	gpu->context = clCreateContext(NULL, 1, &gpu->device, NULL, NULL, NULL);
 	gpu->commandQueue = clCreateCommandQueueWithProperties(gpu->context, gpu->device, 0, NULL);
-	gpu->commandQueue2 = clCreateCommandQueueWithProperties(gpu->context, gpu->device, 0, NULL);
+//	gpu->commandQueue2 = clCreateCommandQueueWithProperties(gpu->context, gpu->device, 0, NULL);
 
 	const char *filename = gpu->type == 0 ? "wild_keccak.cl" : "wild_keccak_multi.cl";
 	char *source = convertToString(filename);
@@ -393,6 +393,7 @@ GPU* initGPU(uint32_t id, uint32_t type) {
 
 	gpu->padd_buff = DeviceMalloc(gpu->context, 640);
 	gpu->output = (uint64_t*)malloc(OUTPUT_SIZE *  sizeof(cl_ulong));
+	gpu->addendum = (uint64_t*)malloc(640);
 	gpu->scratchpad_initialized = false;
 
 	applog(LOG_INFO, "[GPU%u] initialized successfully", id);
@@ -418,7 +419,10 @@ void runGPU(GPU* gpu, uint32_t work_size, size_t offset, cl_ulong target, size_t
 		update_scratchpad_gpu(gpu, pscratchpad_buff, scratchpad_size, 8);
 		gpu->scratchpad_initialized = true;
 	}
-
+	if (gpu->scratchpad_update)
+	{
+		runApplyAddendum(gpu, gpu->addendum, gpu->addendum_count, gpu->scratchpad_size * 4);
+	}
 		cl_int err;
 		if (gpu->type == 0) {
 		err = clSetKernelArg(gpu->kernel, 0, sizeof(cl_mem), &gpu->inputBuffer);
@@ -554,7 +558,7 @@ int scanhash_wildkeccak_gpu(int thr_id, GPU *gpu, uint32_t *pdata, const uint32_
                 *hashes_done = n - first_nonce + opt_work_size;
                 return true;
             }
-            else if((gpu->scratchpad_size == scratchpad_size) || opt_debug)
+            else if(((gpu->scratchpad_size * 4) == scratchpad_size) || opt_debug)
             	applog(LOG_ERR, "[GPU%u] share doesn't validate on CPU, hash=%08x, target=%08x", gpu->threadNumber, hash[7], ptarget[7]);
     	}
     	n += opt_work_size;
@@ -569,7 +573,7 @@ void runApplyAddendum(GPU* gpu, uint64_t* apadd_buff, size_t count/*uint64 units
 	
 	size_t num = 1;
 	cl_int err;
-	CopyBufferToDevice(gpu->commandQueue2, gpu->padd_buff, apadd_buff, 640);
+	CopyBufferToDevice(gpu->commandQueue, gpu->padd_buff, apadd_buff, count*8);
 	if (opt_debug)
 		applog(LOG_INFO, "[GPU%u] applying addendum", gpu->threadNumber);
 	err = clSetKernelArg(gpu->kernel2, 0, sizeof(cl_mem), &gpu->scratchpadBuffer);
@@ -581,13 +585,15 @@ void runApplyAddendum(GPU* gpu, uint64_t* apadd_buff, size_t count/*uint64 units
 	err = clSetKernelArg(gpu->kernel2, 3, sizeof(cl_int), &count);
 	CHECK_OPENCL_ERROR(err, gpu->threadNumber);
 
+	err = clEnqueueNDRangeKernel(gpu->commandQueue, gpu->kernel2, 1, NULL, &num, &num, 0, NULL, NULL);
+	CHECK_OPENCL_ERROR(err, gpu->threadNumber);
+	err = clFinish(gpu->commandQueue);
+	CHECK_OPENCL_ERROR(err, gpu->threadNumber);
+	gpu->scratchpad_update = false;
 	gpu->scratchpad_size = (uint64_t)(size + count) / 4 ;
 	if (opt_debug)
 		applog(LOG_INFO, "[GPU%u] scratchpad size: %" PRIu64 ".", gpu->threadNumber, gpu->scratchpad_size);
-	err = clEnqueueNDRangeKernel(gpu->commandQueue2, gpu->kernel2, 1, NULL, &num, &num, 0, NULL, NULL);
-	CHECK_OPENCL_ERROR(err, gpu->threadNumber);
-	err = clFinish(gpu->commandQueue2);
-	CHECK_OPENCL_ERROR(err, gpu->threadNumber);
+
 	if (opt_debug)
 		applog(LOG_INFO, "[GPU%u] addendum applied.", gpu->threadNumber);
 }

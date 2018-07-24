@@ -110,14 +110,18 @@ inline ulong ROTL64_1(const ulong x, const uint y) { return rotate((x), (ulong)(
 		state3 = ROTL64_1(state18^m2, 21);\
 		state3 = bitselect(state3^state0,state3,state4);
 	
-#define MIX(vstate) vstate ^= sp[vstate.s0 % size] ^ sp[vstate.s1 % size] ^ sp[vstate.s2 % size] ^ sp[vstate.s3 % size];
-
+#define MIX(vstate) tmpstate = sp[vstate.s2 % size] ^ sp[vstate.s3 % size];\
+		tmpstate = sp[vstate.s1 % size] ^ tmpstate;\
+		tmpstate = sp[vstate.s0 % size] ^ tmpstate;\
+		vstate ^= tmpstate;
+		
 #define MIX_ALL MIX(vstate0); MIX(vstate4); MIX(vstate8); MIX(vstate12); MIX(vstate16); MIX(vstate20);
 
 __kernel void search(__global const ulong *restrict in, __global ulong *restrict output, __global const ulong4 *restrict sp, const uint size, const ulong target)
 {
 	ulong nonce = get_global_id(0);
 	
+	ulong4 tmpstate;
 	ulong4 vstate0 = (ulong4)((nonce << 8) + (in[0] & 0xFF), (in[1] & 0xFFFFFFFFFFFFFF00U), in[2], in[3]);
 	ulong4 vstate4 = (ulong4)(in[4], in[5], in[6], in[7]);
 	ulong4 vstate8 = (ulong4)(in[8], in[9], (in[10] & 0xFF) + 256, 0);

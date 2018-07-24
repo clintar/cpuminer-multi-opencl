@@ -649,7 +649,7 @@ bool addendum_decode(const json_t *addm)
         applog(LOG_ERR, "JSON wrong addm hex str len");
         return false;
     }
-    uint64_t* padd_buff = malloc(640);
+    uint64_t* padd_buff = malloc(add_len/2);
     if (!padd_buff)
     {
         applog(LOG_ERR, "out of memory, wanted %zu", add_len/2);
@@ -672,7 +672,14 @@ bool addendum_decode(const json_t *addm)
 		{
 			if(thr_info[i].gpu->scratchpad_initialized)
 			{
-				runApplyAddendum(thr_info[i].gpu, padd_buff, add_len/16, thr_info[i].gpu->scratchpad_size * 4);
+				while (thr_info[i].gpu->scratchpad_update)
+				{		
+					nanosleep((const struct timespec[]){{0,100000000}}, NULL);
+				}
+					memcpy(thr_info[i].gpu->addendum,padd_buff, add_len/2);
+					thr_info[i].gpu->addendum_count = add_len / 16;
+					thr_info[i].gpu->scratchpad_update = true;
+//				runApplyAddendum(thr_info[i].gpu, padd_buff, add_len/16, thr_info[i].gpu->scratchpad_size * 4);
 			}
 		}
 			

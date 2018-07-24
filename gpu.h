@@ -31,10 +31,13 @@ typedef struct {
 
 	uint32_t type;
 	uint64_t *output;
+	uint64_t *addendum;
 	uint32_t threadNumber;
 
 	uint64_t scratchpad_size;
+	uint64_t addendum_count;
 	bool scratchpad_initialized;
+	bool scratchpad_update;
 
 }GPU;
 
