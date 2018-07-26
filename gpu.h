@@ -2,7 +2,7 @@
 #define __GPU_H__
 
 #define OUTPUT_SIZE 16
-#define MAX_GPU 8
+#define MAX_GPU 40
 #define MAX_WORK_SIZE 1024*1024
 
 #include <stdbool.h>
@@ -13,7 +13,6 @@ typedef struct {
 	cl_device_id device;
 	cl_context context;
 	cl_command_queue commandQueue;
-	cl_command_queue commandQueue2;
 	cl_kernel kernel;
 	cl_kernel kernel2;
 	cl_kernel initKernel;
@@ -44,7 +43,7 @@ typedef struct {
 int scanhash_wildkeccak_gpu(int thr_id, GPU *gpu, uint32_t *pdata, const uint32_t *ptarget, uint32_t max_nonce, unsigned long *hashes_done);
 void update_scratchpad_gpu(GPU *gpu, void* scratchpad, size_t size, int hashSize);
 
-GPU* initGPU(uint32_t id, uint32_t type);
+GPU* initGPU(uint32_t device_index, uint32_t id, uint32_t type);
 void runApplyAddendum(GPU* gpu, uint64_t* padd_buff, size_t count/*uint64 units*/, size_t size);
 void runGPU(GPU* gpu, uint32_t work_size, size_t offset, cl_ulong target,size_t work_groups);
 void releaseGPU(GPU* gpu);
