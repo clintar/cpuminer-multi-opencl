@@ -216,7 +216,7 @@ static char const usage[] =
     --platform_index=N  OpenCL platform index to use (default: 0) \n\
     --double_threads    Use two threads per gpu/cpu \n\
     -d  --device=N,N,N...  list of OpenCL devices to use (default: auto-detect) \n\
-    -i  --intensity=N[,N]  OpenCL intensity. N,N for double threads (default: 18) \n\
+    -i  --intensity=N[,N]  OpenCL intensity. N,N for double threads (default: 17) \n\
     -w  --workgroup=N  OpenCL work group count (0-1024, default:0 means auto) \n\
     -k  --scratchpad=URL  URL of inital scratchpad file\n\
     -l  --scratchpad_local_cache=PATH  PATH to local scratchpad file\n\
