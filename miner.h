@@ -223,9 +223,6 @@ struct work_restart {
 };
 
 extern int opt_work_size;
-extern int opt_work_size2;
-extern bool opt_double_threads;
-extern int opt_platform_index;
 extern int opt_work_groups;
 
 extern bool opt_debug;
@@ -275,7 +272,6 @@ struct __attribute__((__packed__)) scratchpad_file_header
 
 
 extern volatile bool stratum_have_work;
-extern volatile bool need_to_rerequest_job;
 extern uint64_t* pscratchpad_buff;
 extern volatile uint64_t scratchpad_size;
 extern struct scratchpad_hi current_scratchpad_hi;

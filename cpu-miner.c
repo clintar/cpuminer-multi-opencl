@@ -115,10 +115,8 @@ static const char *algo_names[] = {
     [ALGO_WILD_KECCAK_OCL_MULTISTEP] = "wildkeccak_ocl_multistep",
 };
 
-int opt_device[19] = {0};
-int opt_devices = 0;
-int opt_work_size = (1 << 17);
-int opt_work_size2 = (1 << 12);
+int opt_device = 0;
+int opt_work_size = (1 << 18);
 int opt_work_groups = 0;
 double total_probability = 0.0;
 uint64_t total_hashes_done = 0;
@@ -141,8 +139,6 @@ static int opt_retries = -1;
 static int opt_fail_pause = 10;
 bool jsonrpc_2 = false;
 int opt_timeout = 0;
-int opt_platform_index = 0;
-bool opt_double_threads = false;
 static int opt_scantime = 5;
 static json_t *opt_config;
 static const bool opt_time = true;
@@ -169,7 +165,6 @@ static char *rpc2_job_id = NULL;
 
 
 volatile bool stratum_have_work = false;
-volatile bool need_to_rerequest_job = false;
 uint64_t* pscratchpad_buff = NULL;
 volatile uint64_t  scratchpad_size = 0;
 
@@ -213,10 +208,8 @@ static char const usage[] =
     wildkeccak   WildKeccak CPU\n\
     wildkeccak_ocl   WildKeccak OpenCL\n\
     wildkeccak_ocl_multistep   WildKeccak OpenCL multistep\n\
-    --platform_index=N  OpenCL platform index to use (default: 0) \n\
-    --double_threads    Use two threads per gpu/cpu \n\
-    -d  --device=N,N,N...  list of OpenCL devices to use (default: auto-detect) \n\
-    -i  --intensity=N[,N]  OpenCL intensity. N,N for double threads (default: 18) \n\
+    -d  --device=N  start OpenCL device to use (default: 0) \n\
+    -i  --intensity=N  OpenCL work intensity (default: 18) \n\
     -w  --workgroup=N  OpenCL work group count (0-1024, default:0 means auto) \n\
     -k  --scratchpad=URL  URL of inital scratchpad file\n\
     -l  --scratchpad_local_cache=PATH  PATH to local scratchpad file\n\
@@ -269,8 +262,6 @@ static struct option const options[] = {
 #ifndef WIN32
     { "background", 0, NULL, 'B' },
 #endif
-    { "platform_index", 1, NULL, 2000 },
-    { "double_threads", 0, NULL, 2001 },
     { "benchmark", 0, NULL, 1005 },
     { "scratchpad", 1, NULL, 'k'},
     { "scratchpad_local_cache", 1, NULL, 'l'},
@@ -632,7 +623,7 @@ bool addendum_decode(const json_t *addm)
         applog(LOG_ERR, "JSON height in addendum-1 (%lld-1) mismatched with current_scratchpad_hi.height(%lld), reverting scratchpad and re-login", hi.height, current_scratchpad_hi.height);
         revert_scratchpad();
         //init re-login
-        need_to_rerequest_job = true;
+        strcpy(rpc2_id, "");
         return false;
     }
 
@@ -1430,15 +1421,6 @@ static void *miner_thread(void *userdata) {
     uint32_t end_nonce = 0xffffffffU / opt_n_threads * (thr_id + 1) - 0x20;
     char s[16];
     int i;
-	int local_opt_work_size;
-	if(mythr->id % 2 == 0 || !opt_double_threads)
-	{
-		local_opt_work_size = opt_work_size;
-	}
-	else
-	{
-		local_opt_work_size = opt_work_size2;
-	}
 
     /* Set worker threads to nice 19 and then preferentially to SCHED_IDLE
     * and if that fails, then SCHED_BATCH. No need for this to be an
@@ -1471,9 +1453,6 @@ static void *miner_thread(void *userdata) {
         if (have_stratum) {
             while (!scratchpad_size || !stratum_have_work ||
                   (!jsonrpc_2 && time(NULL) >= g_work_time + 120)) {
-                if (opt_debug) {
-                    applog(LOG_INFO, "sleep 1; scratchpad_size: %u, stratum_have_work: %d", scratchpad_size, stratum_have_work);
-                }
                 sleep(1);
             }
             pthread_mutex_lock(&g_work_lock);
@@ -1520,8 +1499,8 @@ static void *miner_thread(void *userdata) {
             max64 = g_work_time + (have_longpoll ? LP_SCANTIME : opt_scantime) - time(NULL );
         max64 *= thr_hashrates[thr_id];
     	if (opt_algo == ALGO_WILD_KECCAK_OCL || opt_algo == ALGO_WILD_KECCAK_OCL_MULTISTEP) {
-            max64 /= local_opt_work_size;
-            max64 = (max64 == 0 ? 1 : max64) * local_opt_work_size;
+            max64 /= opt_work_size;
+            max64 = (max64 == 0 ? 1 : max64) * opt_work_size;
     	}
     	else if (max64 <= 0) {
                 max64 = 0x1fffffLL;
@@ -1576,7 +1555,7 @@ static void *miner_thread(void *userdata) {
     	if (opt_algo == ALGO_WILD_KECCAK_OCL || opt_algo == ALGO_WILD_KECCAK_OCL_MULTISTEP) {
     		*nonceptr = start_nonce + hashes_done - 1;
 
-            if (*nonceptr + local_opt_work_size > end_nonce)
+            if (*nonceptr + opt_work_size > end_nonce)
             	*nonceptr = end_nonce;
     	}
         pthread_mutex_lock(&stats_lock);
@@ -1926,18 +1905,15 @@ static bool stratum_handle_response(char *buf) {
                 applog(LOG_ERR, "Response returned \"Unauthenticated\", need to relogin");
                 err_val = json_object_get(err_val, "message");
                 valid = false;
-                strcpy(rpc2_id, "");
             }
             else if(perr_msg && !strcmp(perr_msg, "Low difficulty share")) 
             {
                 //applog(LOG_ERR, "Dump scratchpad file");
                 //dump_scrstchpad_to_file();
-              need_to_rerequest_job = true;
-            }else
-            {
-              need_to_rerequest_job = true;
+				goto out;
             }
             
+            strcpy(rpc2_id, "");
             stratum_have_work = false;
             restart_threads();
         }
@@ -1987,17 +1963,18 @@ static void *stratum_thread(void *userdata) {
             }
         }
 
-        if(need_to_rerequest_job)
+        if(!strcmp(rpc2_id, ""))
         {            
-            applog(LOG_ERR, "Re-requesting job...");
-            if(!stratum_request_job(&stratum))
+            applog(LOG_ERR, "Re-login, disconnecting...");
+            stratum_disconnect(&stratum);
+            //not logged in, try to relogin
+            applog(LOG_ERR, "Re-connect... and relogin...");
+            if(!stratum_connect(&stratum, stratum.url) || !stratum_authorize(&stratum, rpc_user, rpc_pass)) 
             {
                 stratum_disconnect(&stratum);
-              applog(LOG_ERR, "...retry after %d seconds", opt_fail_pause);
+                applog(LOG_ERR, "Failed...retry after %d seconds", opt_fail_pause);
                 sleep(opt_fail_pause);
-              continue;
             }          
-            need_to_rerequest_job = false;
         }
 
         if(!scratchpad_size)
@@ -2056,7 +2033,7 @@ static void *stratum_thread(void *userdata) {
             applog(LOG_INFO, "Keepalive send....");
             stratum_keepalived(&stratum,rpc2_id);
         }
-        if (!stratum_socket_full(&stratum, 400)) {
+        if (!stratum_socket_full(&stratum, 300)) {
              applog(LOG_ERR, "Stratum connection timed out");
              s = NULL;
 	}  else
@@ -2134,44 +2111,16 @@ static void parse_arg(int key, char *arg) {
 
     switch (key) {
     case 'd':
-        p = strtok(arg, ",");
-        opt_devices = 0;
-
-        while (p) {
-          opt_device[opt_devices++] = atoi(p);
-          p = strtok(NULL, ",");
-        }
+        v = atoi(arg);
+        if (v < 0 || v >= MAX_GPU) /* sanity check */
+            show_usage_and_exit(1);
+        opt_device = v;
         break;
     case 'i':
-		p = strtok(arg, ",");
-		if(p)
-		{
-			v = atoi(p);
-			if (v < 10 || v > 30) /* sanity check */
-				show_usage_and_exit(1);
-			v = atoi(p);
-			opt_work_size = (1 << v);
-			if(p = strtok(NULL, ","))
-			{
-				v = atoi(p);
-				if (v < 10 || v > 30) /* sanity check */
-					show_usage_and_exit(1);
-				opt_work_size2 = (1 << v);
-			}
-			else
-			{
-				opt_work_size2 = opt_work_size;
-			}
-		}
-		else
-		{
-			v = atoi(arg);
-			if (v < 10 || v > 30) /* sanity check */
-				show_usage_and_exit(1);
-			opt_work_size = (1 << v);
-			opt_work_size2 = (1 << v);
-		}
-        
+        v = atoi(arg);
+        if (v < 10 || v > 30) /* sanity check */
+            show_usage_and_exit(1);
+        opt_work_size = (1 << v);
         break;
     case 'w':
         v = atoi(arg);
@@ -2254,20 +2203,11 @@ static void parse_arg(int key, char *arg) {
             show_usage_and_exit(1);
         opt_timeout = v;
         break;
-
     case 't':
         v = atoi(arg);
         if (v < 1 || v > 9999) /* sanity check */
             show_usage_and_exit(1);
         opt_n_threads = v;
-        break;
-
-    case 2000:
-        v = atoi(arg);
-        opt_platform_index = v;
-        break;
-    case 2001:
-        opt_double_threads = true;
         break;
     case 'u':
         free(rpc_user);
@@ -2640,20 +2580,13 @@ int main(int argc, char *argv[]) {
 #else
     num_processors = 1;
 #endif
-	
-//TODO: This is a kludge. Should use -t for number to check.
-	if(opt_devices == 0)
-	{
-		opt_devices = MAX_GPU;
-	}
-    int threads_multiplier = opt_double_threads ? 2 : 1;
     if (num_processors < 1)
         num_processors = 1;
     if (!opt_n_threads)
     	if (opt_algo == ALGO_WILD_KECCAK_OCL || opt_algo == ALGO_WILD_KECCAK_OCL_MULTISTEP)
-               opt_n_threads = opt_devices * threads_multiplier;
+    		opt_n_threads = MAX_GPU;
     	else
-               opt_n_threads = num_processors * threads_multiplier;
+    		opt_n_threads = num_processors;
 
 #ifdef HAVE_SYSLOG_H
     if (use_syslog)
@@ -2673,33 +2606,15 @@ int main(int argc, char *argv[]) {
         return 1;
 
 	if (opt_algo == ALGO_WILD_KECCAK_OCL || opt_algo == ALGO_WILD_KECCAK_OCL_MULTISTEP) {
-        for (i = 0; i < opt_devices; i++) {
-            for (int j = 0; j < threads_multiplier; j++) {
-                thr = &thr_info[(i * threads_multiplier) + j];
-				if(opt_debug)
-					applog(LOG_ERR, "Looping through gpus: %d, thread: %d", i, j);
-                if(opt_device[i] == 0 && opt_devices == MAX_GPU)
-				{
-					opt_device[i] = i;
-					if(opt_debug)
-						applog(LOG_ERR, "Auto-testing gpus: %d", i);
-				}
-                thr->gpu = initGPU(opt_device[i], (i * threads_multiplier) + j, opt_algo == ALGO_WILD_KECCAK_OCL ? 0 : 1);
+	    for (i = 0; i < opt_n_threads; i++) {
+	        thr = &thr_info[i];
+
+			thr->gpu = initGPU(i + opt_device, opt_algo == ALGO_WILD_KECCAK_OCL ? 0 : 1);
 			if (thr->gpu == NULL)
-			{
-				if(opt_debug)
-				applog(LOG_ERR, "thread %d create failed", i+j);
-				opt_devices = i;
-				opt_n_threads = i * threads_multiplier;
 				break;
-			}
-				
 	    }
-			if (thr->gpu == NULL)
-			{
-				break;
-			}
-        }
+
+    	opt_n_threads = i;
 	}
 
     /* init workio thread info */
