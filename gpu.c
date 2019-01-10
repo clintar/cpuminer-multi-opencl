@@ -39,98 +39,98 @@ void CHECK_OPENCL_ERROR(cl_int err, uint32_t id)
 		switch (err)
 		{
 		case CL_DEVICE_NOT_FOUND:
-			applog(LOG_ERR, "[GPU%u] error:  CL_DEVICE_NOT_FOUND", id); exit(1);
+			applog(LOG_ERR, "[Thread %u] error:  CL_DEVICE_NOT_FOUND", id); exit(1);
 		case CL_DEVICE_NOT_AVAILABLE:
-			applog(LOG_ERR, "[GPU%u] error:  CL_DEVICE_NOT_AVAILABLE", id); exit(1);
+			applog(LOG_ERR, "[Thread %u] error:  CL_DEVICE_NOT_AVAILABLE", id); exit(1);
 		case CL_COMPILER_NOT_AVAILABLE:
-			applog(LOG_ERR, "[GPU%u] error:  CL_COMPILER_NOT_AVAILABLE", id); exit(1);
+			applog(LOG_ERR, "[Thread %u] error:  CL_COMPILER_NOT_AVAILABLE", id); exit(1);
 		case CL_MEM_OBJECT_ALLOCATION_FAILURE:
-			applog(LOG_ERR, "[GPU%u] error:  CL_MEM_OBJECT_ALLOCATION_FAILURE", id); exit(1);
+			applog(LOG_ERR, "[Thread %u] error:  CL_MEM_OBJECT_ALLOCATION_FAILURE", id); exit(1);
 		case CL_OUT_OF_RESOURCES:
-			applog(LOG_ERR, "[GPU%u] error:  CL_OUT_OF_RESOURCES", id); exit(1);
+			applog(LOG_ERR, "[Thread %u] error:  CL_OUT_OF_RESOURCES", id); exit(1);
 		case CL_OUT_OF_HOST_MEMORY:
-			applog(LOG_ERR, "[GPU%u] error:  CL_OUT_OF_HOST_MEMORY", id); exit(1);
+			applog(LOG_ERR, "[Thread %u] error:  CL_OUT_OF_HOST_MEMORY", id); exit(1);
 		case CL_PROFILING_INFO_NOT_AVAILABLE:
-			applog(LOG_ERR, "[GPU%u] error:  CL_PROFILING_INFO_NOT_AVAILABLE", id); exit(1);
+			applog(LOG_ERR, "[Thread %u] error:  CL_PROFILING_INFO_NOT_AVAILABLE", id); exit(1);
 		case CL_MEM_COPY_OVERLAP:
-			applog(LOG_ERR, "[GPU%u] error:  CL_MEM_COPY_OVERLAP", id); exit(1);
+			applog(LOG_ERR, "[Thread %u] error:  CL_MEM_COPY_OVERLAP", id); exit(1);
 		case CL_IMAGE_FORMAT_MISMATCH:
-			applog(LOG_ERR, "[GPU%u] error:  CL_IMAGE_FORMAT_MISMATCH", id); exit(1);
+			applog(LOG_ERR, "[Thread %u] error:  CL_IMAGE_FORMAT_MISMATCH", id); exit(1);
 		case CL_IMAGE_FORMAT_NOT_SUPPORTED:
-			applog(LOG_ERR, "[GPU%u] error:  CL_IMAGE_FORMAT_NOT_SUPPORTED", id); exit(1);
+			applog(LOG_ERR, "[Thread %u] error:  CL_IMAGE_FORMAT_NOT_SUPPORTED", id); exit(1);
 		case CL_BUILD_PROGRAM_FAILURE:
-			applog(LOG_ERR, "[GPU%u] error:  CL_BUILD_PROGRAM_FAILURE", id); exit(1);
+			applog(LOG_ERR, "[Thread %u] error:  CL_BUILD_PROGRAM_FAILURE", id); exit(1);
 		case CL_MAP_FAILURE:
-			applog(LOG_ERR, "[GPU%u] error:  CL_MAP_FAILURE", id); exit(1);
+			applog(LOG_ERR, "[Thread %u] error:  CL_MAP_FAILURE", id); exit(1);
 
 		case CL_INVALID_VALUE:
-			applog(LOG_ERR, "[GPU%u] error:  CL_INVALID_VALUE", id); exit(1);
+			applog(LOG_ERR, "[Thread %u] error:  CL_INVALID_VALUE", id); exit(1);
 		case CL_INVALID_DEVICE_TYPE:
-			applog(LOG_ERR, "[GPU%u] error:  CL_INVALID_DEVICE_TYPE", id); exit(1);
+			applog(LOG_ERR, "[Thread %u] error:  CL_INVALID_DEVICE_TYPE", id); exit(1);
 		case CL_INVALID_PLATFORM:
-			applog(LOG_ERR, "[GPU%u] error:  CL_INVALID_PLATFORM", id); exit(1);
+			applog(LOG_ERR, "[Thread %u] error:  CL_INVALID_PLATFORM", id); exit(1);
 		case CL_INVALID_DEVICE:
-			applog(LOG_ERR, "[GPU%u] error:  CL_INVALID_DEVICE", id); exit(1);
+			applog(LOG_ERR, "[Thread %u] error:  CL_INVALID_DEVICE", id); exit(1);
 		case CL_INVALID_CONTEXT:
-			applog(LOG_ERR, "[GPU%u] error:  CL_INVALID_CONTEXT", id); exit(1);
+			applog(LOG_ERR, "[Thread %u] error:  CL_INVALID_CONTEXT", id); exit(1);
 		case CL_INVALID_QUEUE_PROPERTIES:
-			applog(LOG_ERR, "[GPU%u] error:  CL_INVALID_QUEUE_PROPERTIES", id); exit(1);
+			applog(LOG_ERR, "[Thread %u] error:  CL_INVALID_QUEUE_PROPERTIES", id); exit(1);
 		case CL_INVALID_COMMAND_QUEUE:
-			applog(LOG_ERR, "[GPU%u] error:  CL_INVALID_COMMAND_QUEUE", id); exit(1);
+			applog(LOG_ERR, "[Thread %u] error:  CL_INVALID_COMMAND_QUEUE", id); exit(1);
 		case CL_INVALID_HOST_PTR:
-			applog(LOG_ERR, "[GPU%u] error:  CL_INVALID_HOST_PTR", id); exit(1);
+			applog(LOG_ERR, "[Thread %u] error:  CL_INVALID_HOST_PTR", id); exit(1);
 		case CL_INVALID_MEM_OBJECT:
-			applog(LOG_ERR, "[GPU%u] error:  CL_INVALID_MEM_OBJECT", id); exit(1);
+			applog(LOG_ERR, "[Thread %u] error:  CL_INVALID_MEM_OBJECT", id); exit(1);
 		case CL_INVALID_IMAGE_FORMAT_DESCRIPTOR:
-			applog(LOG_ERR, "[GPU%u] error:  CL_INVALID_IMAGE_FORMAT_DESCRIPTOR", id); exit(1);
+			applog(LOG_ERR, "[Thread %u] error:  CL_INVALID_IMAGE_FORMAT_DESCRIPTOR", id); exit(1);
 		case CL_INVALID_IMAGE_SIZE:
-			applog(LOG_ERR, "[GPU%u] error:  CL_INVALID_IMAGE_SIZE", id); exit(1);
+			applog(LOG_ERR, "[Thread %u] error:  CL_INVALID_IMAGE_SIZE", id); exit(1);
 		case CL_INVALID_SAMPLER:
-			applog(LOG_ERR, "[GPU%u] error:  CL_INVALID_SAMPLER", id); exit(1);
+			applog(LOG_ERR, "[Thread %u] error:  CL_INVALID_SAMPLER", id); exit(1);
 		case CL_INVALID_BINARY:
-			applog(LOG_ERR, "[GPU%u] error:  CL_INVALID_BINARY", id); exit(1);
+			applog(LOG_ERR, "[Thread %u] error:  CL_INVALID_BINARY", id); exit(1);
 		case CL_INVALID_BUILD_OPTIONS:
-			applog(LOG_ERR, "[GPU%u] error:  CL_INVALID_BUILD_OPTIONS", id); exit(1);
+			applog(LOG_ERR, "[Thread %u] error:  CL_INVALID_BUILD_OPTIONS", id); exit(1);
 		case CL_INVALID_PROGRAM:
-			applog(LOG_ERR, "[GPU%u] error:  CL_INVALID_PROGRAM", id); exit(1);
+			applog(LOG_ERR, "[Thread %u] error:  CL_INVALID_PROGRAM", id); exit(1);
 		case CL_INVALID_PROGRAM_EXECUTABLE:
-			applog(LOG_ERR, "[GPU%u] error:  CL_INVALID_PROGRAM_EXECUTABLE", id); exit(1);
+			applog(LOG_ERR, "[Thread %u] error:  CL_INVALID_PROGRAM_EXECUTABLE", id); exit(1);
 		case CL_INVALID_KERNEL_NAME:
-			applog(LOG_ERR, "[GPU%u] error:  CL_INVALID_KERNEL_NAME", id); exit(1);
+			applog(LOG_ERR, "[Thread %u] error:  CL_INVALID_KERNEL_NAME", id); exit(1);
 		case CL_INVALID_KERNEL_DEFINITION:
-			applog(LOG_ERR, "[GPU%u] error:  CL_INVALID_KERNEL_DEFINITION", id); exit(1);
+			applog(LOG_ERR, "[Thread %u] error:  CL_INVALID_KERNEL_DEFINITION", id); exit(1);
 		case CL_INVALID_KERNEL:
-			applog(LOG_ERR, "[GPU%u] error:  CL_INVALID_KERNEL", id); exit(1);
+			applog(LOG_ERR, "[Thread %u] error:  CL_INVALID_KERNEL", id); exit(1);
 		case CL_INVALID_ARG_INDEX:
-			applog(LOG_ERR, "[GPU%u] error:  CL_INVALID_ARG_INDEX", id); exit(1);
+			applog(LOG_ERR, "[Thread %u] error:  CL_INVALID_ARG_INDEX", id); exit(1);
 		case CL_INVALID_ARG_VALUE:
-			applog(LOG_ERR, "[GPU%u] error:  CL_INVALID_ARG_VALUE", id); exit(1);
+			applog(LOG_ERR, "[Thread %u] error:  CL_INVALID_ARG_VALUE", id); exit(1);
 		case CL_INVALID_ARG_SIZE:
-			applog(LOG_ERR, "[GPU%u] error:  CL_INVALID_ARG_SIZE", id); exit(1);
+			applog(LOG_ERR, "[Thread %u] error:  CL_INVALID_ARG_SIZE", id); exit(1);
 		case CL_INVALID_KERNEL_ARGS:
-			applog(LOG_ERR, "[GPU%u] error:  CL_INVALID_KERNEL_ARGS", id); exit(1);
+			applog(LOG_ERR, "[Thread %u] error:  CL_INVALID_KERNEL_ARGS", id); exit(1);
 		case CL_INVALID_WORK_DIMENSION:
-			applog(LOG_ERR, "[GPU%u] error:  CL_INVALID_WORK_DIMENSION", id); exit(1);
+			applog(LOG_ERR, "[Thread %u] error:  CL_INVALID_WORK_DIMENSION", id); exit(1);
 		case CL_INVALID_WORK_GROUP_SIZE:
-			applog(LOG_ERR, "[GPU%u] error:  CL_INVALID_WORK_GROUP_SIZE", id); exit(1);
+			applog(LOG_ERR, "[Thread %u] error:  CL_INVALID_WORK_GROUP_SIZE", id); exit(1);
 		case CL_INVALID_WORK_ITEM_SIZE:
-			applog(LOG_ERR, "[GPU%u] error:  CL_INVALID_WORK_ITEM_SIZE", id); exit(1);
+			applog(LOG_ERR, "[Thread %u] error:  CL_INVALID_WORK_ITEM_SIZE", id); exit(1);
 		case CL_INVALID_GLOBAL_OFFSET:
-			applog(LOG_ERR, "[GPU%u] error:  CL_INVALID_GLOBAL_OFFSET", id); exit(1);
+			applog(LOG_ERR, "[Thread %u] error:  CL_INVALID_GLOBAL_OFFSET", id); exit(1);
 		case CL_INVALID_EVENT_WAIT_LIST:
-			applog(LOG_ERR, "[GPU%u] error:  CL_INVALID_EVENT_WAIT_LIST", id); exit(1);
+			applog(LOG_ERR, "[Thread %u] error:  CL_INVALID_EVENT_WAIT_LIST", id); exit(1);
 		case CL_INVALID_EVENT:
-			applog(LOG_ERR, "[GPU%u] error:  CL_INVALID_EVENT", id); exit(1);
+			applog(LOG_ERR, "[Thread %u] error:  CL_INVALID_EVENT", id); exit(1);
 		case CL_INVALID_OPERATION:
-			applog(LOG_ERR, "[GPU%u] error:  CL_INVALID_OPERATION", id); exit(1);
+			applog(LOG_ERR, "[Thread %u] error:  CL_INVALID_OPERATION", id); exit(1);
 		case CL_INVALID_GL_OBJECT:
-			applog(LOG_ERR, "[GPU%u] error:  CL_INVALID_GL_OBJECT", id); exit(1);
+			applog(LOG_ERR, "[Thread %u] error:  CL_INVALID_GL_OBJECT", id); exit(1);
 		case CL_INVALID_BUFFER_SIZE:
-			applog(LOG_ERR, "[GPU%u] error:  CL_INVALID_BUFFER_SIZE", id); exit(1);
+			applog(LOG_ERR, "[Thread %u] error:  CL_INVALID_BUFFER_SIZE", id); exit(1);
 		case CL_INVALID_MIP_LEVEL:
-			applog(LOG_ERR, "[GPU%u] error:  CL_INVALID_MIP_LEVEL", id); exit(1);
+			applog(LOG_ERR, "[Thread %u] error:  CL_INVALID_MIP_LEVEL", id); exit(1);
 		case CL_INVALID_GLOBAL_WORK_SIZE:
-			applog(LOG_ERR, "[GPU%u] error:  CL_INVALID_GLOBAL_WORK_SIZE", id); exit(1);
+			applog(LOG_ERR, "[Thread %u] error:  CL_INVALID_GLOBAL_WORK_SIZE", id); exit(1);
 		}
 	}
 }
@@ -191,13 +191,13 @@ void PrintDeviceInfo(unsigned int id, cl_device_id deviceId, cl_ulong *maxMem, c
 	// Get actual device name
 	char* sInfo = malloc(length);
  	clGetDeviceInfo(deviceId, CL_DEVICE_NAME, length, sInfo, NULL);
-	applog(LOG_INFO, "[GPU%u] Device: %s", id, sInfo);
+	applog(LOG_INFO, "[Thread %u] Device: %s", id, sInfo);
 
 	clGetDeviceInfo(deviceId, CL_DEVICE_GLOBAL_MEM_SIZE, sizeof(cl_ulong), maxMem, NULL);
-	applog(LOG_INFO, "[GPU%u] Total device memory: %d MB", id, *maxMem >> 20);
+	applog(LOG_INFO, "[Thread %u] Total device memory: %d MB", id, *maxMem >> 20);
 
 	clGetDeviceInfo(deviceId, CL_DEVICE_MAX_MEM_ALLOC_SIZE, sizeof(cl_ulong), maxBuffer, NULL);
-	applog(LOG_INFO, "[GPU%u] Maximum buffer size: %d MB", id, *maxBuffer >> 20);
+	applog(LOG_INFO, "[Thread %u] Maximum buffer size: %d MB", id, *maxBuffer >> 20);
 
  	free(sInfo);
 }
@@ -220,14 +220,6 @@ cl_mem DeviceMalloc(cl_context m_context, size_t size)
 	return mem;
 }
 
-cl_mem DeviceMalloc_single(cl_context m_context, size_t size)
-{
-        cl_int err;
-        cl_mem mem = clCreateBuffer(m_context, CL_MEM_READ_ONLY, size, NULL, &err);
-        CHECK_OPENCL_ERROR(err, 0);
-
-        return mem;
-}
 void CopyBufferToDevice(cl_command_queue queue, cl_mem buffer, void* h_Buffer, size_t size)
 {
 
@@ -270,7 +262,7 @@ void CopyBufferToHost  (cl_command_queue queue, cl_mem buffer, void* h_Buffer, s
 	CHECK_OPENCL_ERROR(err, 0);
 }
 
-GPU* initGPU(uint32_t id, uint32_t type) {
+GPU* initGPU(uint32_t device_index, uint32_t id, uint32_t type) {
 	GPU* gpu = (GPU*)calloc(1, sizeof(GPU));
 	gpu->threadNumber = id;
 	gpu->type = type;
@@ -290,19 +282,19 @@ GPU* initGPU(uint32_t id, uint32_t type) {
 	cl_device_id        *devices;
 	cl_platform_id* platforms = (cl_platform_id*)malloc(numPlatforms* sizeof(cl_platform_id));
 	status = clGetPlatformIDs(numPlatforms, platforms, NULL);
-	unsigned int gpuCount = 0;
 	for (int i = 0; i < numPlatforms; i++) {
+		if (opt_platform_index == i) {
 		platform = platforms[i];
 		status = clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 0, NULL, &numDevices);
-		if (numDevices > 0) {
-			if (id - gpuCount < numDevices) {
+		if (numDevices > 0 && device_index < numDevices) {
 				devices = (cl_device_id*)malloc(numDevices * sizeof(cl_device_id));
 				status = clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, numDevices, devices, NULL);
-				gpu->device = devices[id - gpuCount];
+				if (devices[device_index]) {
+					gpu->device = devices[device_index];
+					applog(LOG_INFO, "Using platform %u, numDevices: %u, device_index %u", i, numDevices, device_index);
 				break;
 			}
-			else
-				gpuCount += numDevices;
+			}
 		}
 	}
 	free(platforms);
@@ -312,7 +304,7 @@ GPU* initGPU(uint32_t id, uint32_t type) {
 	}
 	else
 	{
-		applog(LOG_DEBUG, "[GPU%u] Init", id);
+		applog(LOG_DEBUG, "[GPU %u, Thread %u] Init", device_index, id);
 	}
 
 	enum platform_type platformType = PrintPlatformInfo(id, platform);
@@ -320,10 +312,11 @@ GPU* initGPU(uint32_t id, uint32_t type) {
 	PrintDeviceInfo(id, gpu->device, &maxMem, &maxBuffer);
 
 	gpu->context = clCreateContext(NULL, 1, &gpu->device, NULL, NULL, NULL);
-	gpu->commandQueue = clCreateCommandQueueWithProperties(gpu->context, gpu->device, 0, NULL);
+	gpu->commandQueue = clCreateCommandQueue(gpu->context, gpu->device, 0, NULL);
+	gpu->commandQueue2 = clCreateCommandQueue(gpu->context, gpu->device, 0, NULL);
 //	gpu->commandQueue2 = clCreateCommandQueueWithProperties(gpu->context, gpu->device, 0, NULL);
 
-	const char *filename = gpu->type == 0 ? "wild_keccak.cl" : "wild_keccak_multi.cl";
+	const char *filename = gpu->type == 0 ? (opt_alt_kernel == true ? "wild_keccak-alt.cl" : "wild_keccak.cl") : "wild_keccak_multi.cl";
 	char *source = convertToString(filename);
 	size_t sourceSize[] = { strlen(source) };
 
@@ -382,12 +375,12 @@ GPU* initGPU(uint32_t id, uint32_t type) {
 		gpu->kernel2 = GetKernel(gpu->program, "addendum");
 	}
 	else {
-		applog(LOG_ERR, "[GPU%u] kernel type %u not supported", id, gpu->type);
+		applog(LOG_ERR, "[Thread %u] kernel type %u not supported", id, gpu->type);
 		exit(1);
 	}
 	gpu->inputBuffer = DeviceMalloc(gpu->context, 256);
 	gpu->outputBuffer = DeviceMalloc(gpu->context, OUTPUT_SIZE * sizeof(cl_ulong));
-	gpu->scratchpadBuffer = DeviceMalloc_single(gpu->context, WILD_KECCAK_SCRATCHPAD_BUFFSIZE);
+	gpu->scratchpadBuffer = DeviceMalloc(gpu->context, WILD_KECCAK_SCRATCHPAD_BUFFSIZE);
 	if (gpu->type == 1)
 		gpu->stateBuffer = DeviceMalloc(gpu->context, MAX_WORK_SIZE * 8 * 25);
 
@@ -396,7 +389,7 @@ GPU* initGPU(uint32_t id, uint32_t type) {
 	gpu->addendum = (uint64_t*)malloc(640);
 	gpu->scratchpad_initialized = false;
 
-	applog(LOG_INFO, "[GPU%u] initialized successfully", id);
+	applog(LOG_INFO, "[Thread %u] initialized successfully", id);
 	return gpu;
 }
 
@@ -405,7 +398,7 @@ void runGPU(GPU* gpu, uint32_t work_size, size_t offset, cl_ulong target, size_t
 //	if (opt_debug)
 //		applog(LOG_INFO, "[GPU%u] run work = %u, offset = %u", gpu->threadNumber, work_size, offset);
 	if (gpu->type == 1 && work_size > MAX_WORK_SIZE) {
-		applog(LOG_ERR, "[GPU%u] work size %u more then maximum allowed %u. Decrease scan time.", gpu->threadNumber, work_size, MAX_WORK_SIZE);
+		applog(LOG_ERR, "[Thread %u] work size %u more then maximum allowed %u. Decrease scan time.", gpu->threadNumber, work_size, MAX_WORK_SIZE);
 		exit(1);
 	}
 
@@ -526,12 +519,21 @@ int scanhash_wildkeccak_gpu(int thr_id, GPU *gpu, uint32_t *pdata, const uint32_
     const uint32_t first_nonce = n;
     uint32_t hash[32 / 4] __attribute__((aligned(32)));
 
+	int local_opt_work_size;
+	if(gpu->threadNumber % 2 == 0 || !opt_double_threads)
+	{
+		local_opt_work_size = opt_work_size;
+	}
+	else
+	{
+		local_opt_work_size = opt_work_size2;
+	}
     do {
     	CopyBufferToDevice(gpu->commandQueue, gpu->inputBuffer, pdata, 81);
     	memset(gpu->output, 0, OUTPUT_SIZE * sizeof(uint64_t));
     	CopyBufferToDevice(gpu->commandQueue, gpu->outputBuffer, gpu->output, OUTPUT_SIZE * sizeof(uint64_t));
 
-    	if (opt_work_size + n > max_nonce)
+    	if (local_opt_work_size + n > max_nonce)
     		break;
     struct timespec start_time, target_time;
     get_time(&start_time);
@@ -539,7 +541,7 @@ int scanhash_wildkeccak_gpu(int thr_id, GPU *gpu, uint32_t *pdata, const uint32_
     dstart = timespec_to_double(&start_time);
     dtarget = dstart + kern_avg_run_time;
     double_to_timespec(dtarget, &target_time);
-        runGPU(gpu, opt_work_size, n, *((uint64_t*)&ptarget[6]), opt_work_groups);
+        runGPU(gpu, local_opt_work_size, n, *((uint64_t*)&ptarget[6]), opt_work_groups);
 		    // compute the expected run time of the kernels that have been queued
 
 	
@@ -554,14 +556,21 @@ int scanhash_wildkeccak_gpu(int thr_id, GPU *gpu, uint32_t *pdata, const uint32_
     		uint64_t found_nonce = gpu->output[i];
             *nonceptr = found_nonce;
             wild_keccak_hash_dbl_use_global_scratch((uint8_t*)pdata, 81, (uint8_t*)hash);
-            if (unlikely(hash[7] < ptarget[7])) {
-                *hashes_done = n - first_nonce + opt_work_size;
+            if (unlikely(hash[7] <= ptarget[7])) {
+                *hashes_done = n - first_nonce + local_opt_work_size;
                 return true;
             }
             else if(((gpu->scratchpad_size * 4) == scratchpad_size) || opt_debug)
-            	applog(LOG_ERR, "[GPU%u] share doesn't validate on CPU, hash=%08x, target=%08x", gpu->threadNumber, hash[7], ptarget[7]);
+			{
+            	applog(LOG_ERR, "[Thread %u] share doesn't validate on CPU, hash=%08x, target=%08x, gpu scratchpad size:%u, gpu scratchpad size:%u", gpu->threadNumber, hash[7], ptarget[7], (gpu->scratchpad_size * 4), scratchpad_size);
     	}
-    	n += opt_work_size;
+			else if((gpu->scratchpad_size * 4) != scratchpad_size)
+			{
+				applog(LOG_ERR, "[Thread %u] sending stale share", gpu->threadNumber);
+				return true;
+			}
+    	}
+    	n += local_opt_work_size;
 		
     } while (likely((n < max_nonce && !work_restart[thr_id].restart)));
 
@@ -573,9 +582,9 @@ void runApplyAddendum(GPU* gpu, uint64_t* apadd_buff, size_t count/*uint64 units
 	
 	size_t num = 1;
 	cl_int err;
-	CopyBufferToDevice(gpu->commandQueue, gpu->padd_buff, apadd_buff, count*8);
+	CopyBufferToDevice(gpu->commandQueue2, gpu->padd_buff, apadd_buff, count*8);
 	if (opt_debug)
-		applog(LOG_INFO, "[GPU%u] applying addendum", gpu->threadNumber);
+		applog(LOG_INFO, "[Thread %u] applying addendum", gpu->threadNumber);
 	err = clSetKernelArg(gpu->kernel2, 0, sizeof(cl_mem), &gpu->scratchpadBuffer);
 	CHECK_OPENCL_ERROR(err, gpu->threadNumber);
 	err = clSetKernelArg(gpu->kernel2, 1, sizeof(cl_mem), &gpu->padd_buff);
@@ -585,25 +594,26 @@ void runApplyAddendum(GPU* gpu, uint64_t* apadd_buff, size_t count/*uint64 units
 	err = clSetKernelArg(gpu->kernel2, 3, sizeof(cl_int), &count);
 	CHECK_OPENCL_ERROR(err, gpu->threadNumber);
 
-	err = clEnqueueNDRangeKernel(gpu->commandQueue, gpu->kernel2, 1, NULL, &num, &num, 0, NULL, NULL);
+	err = clEnqueueNDRangeKernel(gpu->commandQueue2, gpu->kernel2, 1, NULL, &num, &num, 0, NULL, NULL);
 	CHECK_OPENCL_ERROR(err, gpu->threadNumber);
-	err = clFinish(gpu->commandQueue);
+	err = clFinish(gpu->commandQueue2);
 	CHECK_OPENCL_ERROR(err, gpu->threadNumber);
 	gpu->scratchpad_update = false;
 	gpu->scratchpad_size = (uint64_t)(size + count) / 4 ;
 	if (opt_debug)
-		applog(LOG_INFO, "[GPU%u] scratchpad size: %" PRIu64 ".", gpu->threadNumber, gpu->scratchpad_size);
+		applog(LOG_INFO, "[Thread %u] scratchpad size: %" PRIu64 ".", gpu->threadNumber, gpu->scratchpad_size);
 
 	if (opt_debug)
-		applog(LOG_INFO, "[GPU%u] addendum applied.", gpu->threadNumber);
+		applog(LOG_INFO, "[Thread %u] addendum applied.", gpu->threadNumber);
 }
 
 void update_scratchpad_gpu(GPU *gpu, void* scratchpad, size_t size, int hashSize)
 {
-	applog(LOG_INFO, "[GPU%u] scratchpad update %u", gpu->threadNumber, size);
+	applog(LOG_INFO, "[Thread %u] scratchpad update %u", gpu->threadNumber, size);
 	gpu->scratchpad_initialized = true;
-	CopyBufferToDevice(gpu->commandQueue, gpu->scratchpadBuffer, scratchpad, size * hashSize);
+	CopyBufferToDevice(gpu->commandQueue2, gpu->scratchpadBuffer, scratchpad, size * hashSize);
 	gpu->scratchpad_size = (uint32_t)size / 4;
 	if (opt_debug)
-		applog(LOG_INFO, "[GPU%u] scratchpad size: %" PRIu64 ".", gpu->threadNumber, gpu->scratchpad_size);
+		applog(LOG_INFO, "[Thread %u] scratchpad size: %" PRIu64 ".", gpu->threadNumber, gpu->scratchpad_size);
+	clFinish(gpu->commandQueue2);
 }
